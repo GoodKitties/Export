@@ -12,6 +12,8 @@
 При отсутствии записей в дневнике работает корректно.
 Есть обход проверки cloudflare.
 
-parse_diary_api - основной файл
-scrape - обход проверки cloudflare на основе https://github.com/Anorov/cloudflare-scrape
+parse_diary_api - основной файл; 
+
+scrape - обход проверки cloudflare на основе https://github.com/Anorov/cloudflare-scrape;
+
 diary_dybr.json - пример выгрузки
