@@ -15,7 +15,6 @@ class diary_integrator:
         self.__login = ''
         self.__password = ''
         self.account = {}
-        self.__use_white_list = False
     def get_sid(self, login, password):
         self.__time = datetime.min
         self.__login = login
@@ -72,32 +71,33 @@ class diary_integrator:
                   'no_comments', 'comments_count_data', 'postid',
                   'access_list', 'poll_title', 'poll_multiselect', 'poll_end',
                   'dateline_date', 'dateline_cdate']
-        for i in range(1, 11):
-            fields.append('poll_answer_'+str(i))
-        data={'sid':self.__sid, 'method':'post.get', 'type':'diary', 'from':'0', 'src':1,  'fields': ','.join(fields)}
+        data={'sid':self.__sid, 'method':'post.get', 'type':'diary', 'src':1, 'fields': ','.join(fields)}
+        add_data={'sid':self.__sid, 'method':'post.get', 'type':'diary', 'src':0, 'fields': 'message_html'}
         posts = []
-        self.account['votings'] = []
         ind = 0
         while 1:
             data['from'] = str(ind)
             req = self.__session.post('http://www.diary.ru/api/', data=data)
             dict = json.loads(req.content.decode())['posts']
+            if self.account['journal'] == '2':
+                add_data['from'] = str(ind)
+                add_req = self.__session.post('http://www.diary.ru/api/', data=add_data)
+                add_dict = json.loads(add_req.content.decode())['posts']
             for h in dict:
                 post = {}
                 self.account['access'] = dict[h].pop('jaccess')
                 for hh in dict[h]:
                     post[hh] = dict[h][hh]
+                if self.account['journal'] == '2':
+                    post['message_src'] = add_dict[h]['message_html']
                 if self.account['journal'] == '1':
                     self.account['by-line'] = post.pop('author_title', '')
                     post.pop('author_username', '')
                 elif post['author_username'] == self.account['username']:
                     self.account['by-line'] = post.pop('author_title', '')
                 else: post.pop('author_title', '')
-                if post['access'] == '4':
-                    self.__use_white_list = True
                 post['tags'] = list(post.pop('tags_data', {}).values())
                 if 'poll_title' in post:
-                    self.account['votings'].append(post['postid'])
                     post['voting'] = {
                         'question': post.pop('poll_title', ''),
                         'end': post.pop('poll_end') != '0',
@@ -146,6 +146,7 @@ class diary_integrator:
 
             def handle_starttag(self, tag, attrib):
                 if self.elem == 'exit': return
+
                 if tag == 'div':
                     cl = next(filter(lambda x: x[0] == 'class', attrib), ('', ''))[1]
                     if 'voting' in cl.split():
@@ -153,8 +154,11 @@ class diary_integrator:
                 elif tag == 'table' and self.elem == 'voting':
                     self.elem = 'visible voting'
                 elif tag == 'a' and self.elem == 'voting':
-                    self.info['link'] = next(filter(lambda x: x[0] == 'href', attrib), ('', ''))[1]
-                    self.elem == 'exit'
+                    link = next(filter(lambda x: x[0] == 'href', attrib), ('', ''))[1]
+                    if 'diary.ru' not in link:
+                        link = 'http://www.diary.ru' + link
+                    self.info['link'] = link
+                    self.elem = 'exit'
                 elif tag == 'input':
                     name = next(filter(lambda x: x[0] == 'name', attrib), ('', ''))[1]
                     if name == 'usertitle':
@@ -169,6 +173,14 @@ class diary_integrator:
                         self.elem = 'black'
                     elif name == 'fav_tags':
                         self.elem = 'tags'
+                elif tag == 'select':
+                    name = next(filter(lambda x: x[0] == 'name', attrib), ('', ''))[1]
+                    if name == 'timezoneoffset':
+                        self.elem = 'timezone'
+                elif tag == 'option' and self.elem == 'timezone':
+                    if next(filter(lambda x: x[0] == 'selected', attrib), None):
+                        value = next(filter(lambda x: x[0] == 'value', attrib), ('', ''))[1]
+                        self.info['timezone'] = value
 
             def handle_endtag(self, tag):
                 if self.elem == 'exit': return
@@ -179,6 +191,9 @@ class diary_integrator:
                     self.answer = {}
                 elif tag == 'table' and 'voting' in self.elem:
                     self.elem = 'exit'
+                elif tag == 'select' and self.elem == 'timezone':
+                    self.elem = ''
+
             def handle_data(self, data):
                 if self.elem == 'exit': return
 
@@ -187,6 +202,9 @@ class diary_integrator:
 
                 if self.elem == 'visible voting':
                     if 'variant' not in self.answer:
+                        if data[:5].lower() == 'всего':
+                            self.elem = 'exit'
+                            return
                         self.answer['variant'] = data[3:].lstrip().rstrip()
                     elif 'count' not in self.answer:
                         self.answer['count'] = data
@@ -237,10 +255,10 @@ class diary_integrator:
         if self.account['journal'] != '0':
             for post in self.account['posts']:
                 if 'voting' in post:
-                    r = self.__session.post('http://iossh.diary.ru/p'+post['postid']+'.htm')
+                    r = self.__session.post('http://diary.ru/~'+self.account['shortname']+'/p'+post['postid']+'.htm')
                     parser.feed(r.text)
                     if 'link' in parser.info:
-                        parser.elem = ''
+                        parser.elem = 'voting'
                         r = self.__session.post(parser.info['link'])
                         parser.feed(r.text)
                     post['voting']['answers'] = parser.info['answers']
@@ -278,6 +296,11 @@ class diary_integrator:
         r = self.__session.post('http://www.diary.ru/options/diary/?tags')
         parser.feed(r.text)
         self.account['tags'] = [tag.lstrip().rstrip() for tag in parser.info['tags']]
+
+        parser.elem = ''
+        r = self.__session.post('http://www.diary.ru/options/member/?geography')
+        parser.feed(r.text)
+        self.account['timezone'] = parser.info['timezone']
 
         return self.account
 
