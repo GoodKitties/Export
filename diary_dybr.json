@@ -683,8 +683,6 @@
     "comment_list": [],
     "white_list": [],
     "black_list": [],
-    "tags": [
-        "¬ыводить список любимых тем в форме новой записи"
-    ],
+    "tags": [],
     "timezone": "0"
 }

@@ -285,6 +285,8 @@ class diary_integrator:
         parser.elem = ''
         r = self.__session.post('http://www.diary.ru/options/diary/?tags')
         parser.feed(r.text)
+        if 'Выводить список любимых тем в форме новой записи' in parser.info['tags']:
+            parser.info['tags'].remove('Выводить список любимых тем в форме новой записи')
         self.account['tags'] = [tag.lstrip().rstrip() for tag in parser.info['tags']]
         print('Любимые теги получены')
 
