@@ -17,8 +17,8 @@ class diary_integrator:
         self.account = {}
     def get_sid(self, login, password):
         self.__time = datetime.min
-        self.__login = login
-        self.__password = password
+        self.__login = login.encode('windows-1251')
+        self.__password = password.encode('windows-1251')
         m = md5()
         m.update((self.__api_pass.encode('windows-1251')+password.encode('windows-1251')))
         data = {'method': 'user.auth', 'username': login.encode('windows-1251'), 'password': m.hexdigest(), 'appkey': self.__api_key}
@@ -109,6 +109,7 @@ class diary_integrator:
                 posts.append(post)
             if len(dict) < 20: break
             ind += 20
+            print('\rОбработано записей', ind, end='', flush=True)
         self.account['posts'] = posts
         return self.account
     def __get_comments(self, post):
@@ -125,23 +126,10 @@ class diary_integrator:
                 post['comments'].append({h: comments[comment].get(h, '') for h in fields})
 
         return self.account
-    def __get_tags(self):
-        if not self.__reauth(): return
-        tags_names = []
-        if self.account.get('tags', ''):
-            tags = self.account['tags'].split(',')
-            for i in range(0, len(tags), 100):
-                data = {'sid': self.__sid, 'method': 'tags.get'}
-                for j in range(i, min(i+100, len(tags))):
-                    data['tagid['+str(j)+']'] = tags[j]
-                req = self.__session.post('http://www.diary.ru/api/', data = data)
-                tags_names += list(json.loads(req.content.decode())['tags'].values())
-        self.account['tags'] = tags_names
-        return self.account
     def __get_info_with_parser(self):
         class Parser(HTMLParser):
             elem = ''
-            info = {'answers': [], 'list':[], 'white_list':[], 'black_list':[], 'tags':[]}
+            info = {'answers': [], 'list':[], 'white_list':[], 'black_list':[], 'tags':[], 'timezone':'0'}
             answer = {}
 
             def handle_starttag(self, tag, attrib):
@@ -262,6 +250,7 @@ class diary_integrator:
                         r = self.__session.post(parser.info['link'])
                         parser.feed(r.text)
                     post['voting']['answers'] = parser.info['answers']
+        print('Результаты голосований получены')
 
         r = self.__session.post('http://www.diary.ru/options/member/?profile')
         parser.feed(r.text)
@@ -291,11 +280,13 @@ class diary_integrator:
         r = self.__session.post('http://www.diary.ru/options/diary/?pch')
         parser.feed(r.text)
         self.account['black_list'] = parser.info['black_list']
+        print('Списки доступа получены')
 
         parser.elem = ''
         r = self.__session.post('http://www.diary.ru/options/diary/?tags')
         parser.feed(r.text)
         self.account['tags'] = [tag.lstrip().rstrip() for tag in parser.info['tags']]
+        print('Любимые теги получены')
 
         parser.elem = ''
         r = self.__session.post('http://www.diary.ru/options/member/?geography')
@@ -311,7 +302,7 @@ class diary_integrator:
             return
         self.__get_account_info()
         self.__get_posts()
-        self.__get_tags()
+        print('\rЗаписи и комментарии получены')
         self.__get_info_with_parser()
         return self.account
 
@@ -338,14 +329,15 @@ try:
             rez = di.get_sid(login, pas)
         else:
             break
-    print('\nНачинаем выгрузку...')
+    print('\nНачинаем выгрузку...\n')
     rez = di.get_all_info()
 
     di.account['username']
-    json.dump(di.account, open('diary_'+login.replace(' ', '_')+'.json', 'w', encoding="utf-16"), ensure_ascii=False
+    json.dump(di.account, open('diary_'+login.replace(' ', '_')+'.json', 'w'), ensure_ascii=False
+              # для читаемости. Увеличивает объем выходного файла
               , indent=4
               )
-    print('\nВыгрузка записей и комментариев произведена успешно.')
+    print('\nВыгрузка произведена успешно.')
     print('Данные сохранены в файл diary_'+login.replace(' ', '_')+'.json')
 
     print('\nСтатистика')

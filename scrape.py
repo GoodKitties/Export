@@ -5,15 +5,6 @@ from requests.sessions import Session
 from copy import deepcopy
 from time import sleep
 
-import execjs
-
-
-
-
-
-
-
-
 try:
     from urlparse import urlparse
 except ImportError:
