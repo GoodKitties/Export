@@ -103,14 +103,11 @@ class CloudflareScraper(Session):
 
         number = 0
         for x in re.findall(r'([\+\-\*\\\/]?)([=:])([\[\]\+!\(\)]+)', body):
-            print(''.join(['x', x[0], '=', str(x[2])]))
             if x[0]:
                 s = ''.join(['number', x[0], str(from_string_to_number(x[2]))])
             else:
                 s = str(from_string_to_number(x[2]))
-            # print(s)
             number = eval(s)
-        print(number)
         return number
 
     @classmethod
