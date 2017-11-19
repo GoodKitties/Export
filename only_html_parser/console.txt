@@ -1,0 +1,3 @@
+pyinstaller gui.py
+"C:\Program Files\7-Zip\7z.exe" a -r -t7z -m1=LZMA dist.7z dist\*.*
+copy /b 7zsd.sfx + config.txt + dist.7z diary_export.exe

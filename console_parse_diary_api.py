@@ -27,7 +27,6 @@ class diary_integrator:
         data = {'method': 'user.auth', 'username': login.encode('windows-1251'), 'password': m.hexdigest(), 'appkey': self.__api_key}
         req = self.__session.post('http://www.diary.ru/api/', data=data)
         resp = json.loads(req.content.decode())
-        self.account = {}
         if resp['result'] == '0':
             self.__time = datetime.now()
             self.__sid = resp['sid']
@@ -67,8 +66,9 @@ class diary_integrator:
         if not self.__reauth(): return
         if self.account['journal'] == '0': return self.account
 
-        fields = ['author_username', 'author_title', 'tags_data', 'access', 'jaccess', 'message_src',
+        fields = ['author_username', 'author_title', 'tags_data', 'access', 'message_src',
                   'no_comments', 'comments_count_data', 'postid',
+                  'current_music', 'current_mood', 'title',
                   'access_list', 'poll_title', 'poll_multiselect', 'poll_end',
                   'dateline_date', 'dateline_cdate']
         data={'sid':self.__sid, 'method':'post.get', 'type':'diary', 'src':1, 'fields': ','.join(fields)}
@@ -84,11 +84,19 @@ class diary_integrator:
                 add_dict = json.loads(add_req.content.decode())['posts']
             for h in dict:
                 post = {}
-                self.account['access'] = dict[h].pop('jaccess')
                 for hh in dict[h]:
                     post[hh] = dict[h][hh]
                 if self.account['journal'] == '2':
                     post['message_html'] = add_dict[h]['message_html']
+                if self.account['journal'] == '1':
+                    self.account['by-line'] = post.pop('author_title', '')
+                    post['message_html'] = post.pop('message_src')
+                    post.pop('author_username', '')
+                elif post['author_username'] == self.account['username']:
+                    self.account['by-line'] = post.pop('author_title', '')
+                else: post.pop('author_title', '')
+                if 'access_list' in post:
+                    post['access_list'] = post['access_list'].split('\n')
                 post['tags'] = list(post.pop('tags_data', {}).values())
                 if 'poll_title' in post:
                     post['voting'] = {
@@ -110,7 +118,7 @@ class diary_integrator:
 
         count = int(post.pop('comments_count_data', '0'))
         if count:
-            fields = ['author_username', 'message_html', 'dateline', 'commentid']
+            fields = ['author_username', 'message_html', 'dateline']
             # если использовать fields в запросе, то выгружается только последний комментарий
             data = {'sid': self.__sid, 'method': 'comment.get', 'postid': post['postid']}
             req = self.__session.post('http://www.diary.ru/api/', data=data)
@@ -124,7 +132,7 @@ class diary_integrator:
     def __get_info_with_parser(self):
         class Parser(HTMLParser):
             elem = ''
-            info = {'answers': [], 'list':[], 'white_list':[], 'black_list':[], 'tags':[], 'timezone':'0'}
+            info = {'answers': [], 'list':[], 'white_list':[], 'black_list':[], 'tags':[], 'access':'0', 'timezone':'0', 'epigraph':''}
             answer = {}
 
             def handle_starttag(self, tag, attrib):
@@ -144,8 +152,12 @@ class diary_integrator:
                     self.elem = 'exit'
                 elif tag == 'input':
                     name = next(filter(lambda x: x[0] == 'name', attrib), ('', ''))[1]
+                    checked = next(filter(lambda x: x[0] == 'checked', attrib), None)
                     if name == 'usertitle':
                         self.info['title'] = next(filter(lambda x: x[0] == 'value', attrib), ('', ''))[1]
+                    elif 'access_mode' in name and 'album' not in name and checked:
+                        value = next(filter(lambda x: x[0] == 'value', attrib), ('', ''))[1]
+                        self.info['access'] = str(int(self.info['access']) + int(value))
                 elif tag == 'textarea':
                     name = next(filter(lambda x: x[0] == 'name', attrib), ('', ''))[1]
                     if name in ['access_list', 'comments_access_list']:
@@ -229,6 +241,9 @@ class diary_integrator:
                             data.remove('')
                     self.info['tags'] = data
                     self.elem = ''
+                elif self.elem == 'epigraph':
+                    self.info['epigraph'] = data
+                    self.elem = ''
 
         parser = Parser()
 
@@ -251,22 +266,29 @@ class diary_integrator:
         self.account['by-line'] = parser.info.get('title', '')
 
         parser.elem = ''
+        parser.info['access'] = '0'
+        parser.info['list'] = []
         r = self.__session.post('http://www.diary.ru/options/member/?access')
         parser.feed(r.text)
         self.account['profile_list'] = parser.info['list']
+        self.account['profile_access'] = parser.info['access']
 
         parser.elem = ''
+        parser.info['access'] = '0'
         parser.info['list'] = []
         r = self.__session.post('http://www.diary.ru/options/diary/?access')
         parser.feed(r.text)
         self.account['journal_list'] = parser.info['list']
+        self.account['journal_access'] = parser.info['access']
 
         parser.elem = ''
+        parser.info['access'] = '0'
         parser.info['list'] = []
         parser.info['white_list'] = []
         r = self.__session.post('http://www.diary.ru/options/diary/?commentaccess')
         parser.feed(r.text)
         self.account['comment_list'] = parser.info['list']
+        self.account['comment_access'] = parser.info['access']
         self.account['white_list'] = parser.info['white_list']
 
         parser.elem = ''
@@ -287,6 +309,12 @@ class diary_integrator:
         parser.feed(r.text)
         self.account['timezone'] = parser.info['timezone']
 
+        parser.elem = ''
+        parser.info['epigraph'] = ''
+        r = self.__session.post('http://www.diary.ru/options/diary/?owner')
+        parser.feed(r.text)
+        self.account['epigraph'] = parser.info['epigraph']
+
         return self.account
 
     def __parse_html_message(self, element):
@@ -294,23 +322,25 @@ class diary_integrator:
 
         diaryname = '0-9a-zA-Zа-яА-Я\-\_\~\!\@\#\$\&\*\(\)\+\?\=\/\|\\\.\,\;\:\<\>\[\] '
         diarylink = '0-9a-zA-Z\-\_\.\!\~\*\'\\(\)\/\:'
-        id = element.get('postid', '') + element.get('commentid', '')
-
-        fullJpost = r'<a class="TagJIco" href="/member/\?[0-9]+" title="профиль" target=_blank>&nbsp;</a><a class="TagL" href="http://[' + diarylink + ']+.diary.ru" title="дневник: [' + diaryname + ']+" target=_blank>([' + diaryname + ']+)</a>'
-        fullJcomment = r'<a class="TagL" href="['+diarylink+']+.diary.ru" title="['+diaryname+']+" target=_blank>([' + diaryname + ']+)</a>'
-        openMORE = r"(<a href='(?:/~[" + diarylink + "]+/p" + id + ".htm\?oam|)#more[0-9]*' class=LinkMore onClick='var e=event; if \(swapMore\(\"c?" + id + "m[0-9]+\", e.ctrlKey \|\| e.altKey\)\) document.location = this.href; return false;' id=linkmorec?" + id + "m[0-9]+ >)"
-        startMORE = r"(</a><span id=morec?" + id + "m[0-9]+ ondblclick='return swapMore\(\"c?" + id + "m[0-9]+\"\);' style='display:none;visibility:hidden;'><a name='morec?" + id + "m[0-9]+start'></a>)"
-        closeMORE = r"<a name='morec?" + id + "m[0-9]+end'></a></span>"
-        movePOST = r"(<br><div><a href='http://[" + diarylink + "]+.diary.ru/p" + id + ".htm\?down&signature=[0-9a-zA-Z]+' title='вернуть на место' onclick='return confirm\(\"Вы уверены, что хотите вернуть запись на место\?\"\);'><small>запись создана: [0-9.]+ в [0-9:]+</small></a></div>$)"
+        fullJ = r'(?:<a class="TagJIco" href="(?:http://www.diary.ru|)/member/\?[0-9]+" title="профиль" target=(?:\'|\")?_blank(?:\'|\")?>(?:&nbsp;|)</a>|)<a class="TagL" href="[' + diarylink + ']+.diary.ru" title="(?:дневник: |)[' + diaryname + ']+" target=(?:\'|\")?_blank(?:\'|\")?>([' + diaryname + ']+)</a>'
+        openMORE = r'(<a href=(?:\'|\")(?:/~[' + diarylink + ']+/p[0-9]+.htm\?oam|)#more[0-9]*(?:\'|\") class=(?:\'|\")?LinkMore(?:\'|\")? on(?:c|C)lick=(?:\'|\")var e=event; if \(swapMore\(\"c?[0-9]+m[0-9]+\", e.ctrlKey \|\| e.altKey\)\) document.location = this.href; return false;(?:\'|\") id=(?:\'|\")?linkmorec?[0-9]+m[0-9]+(?:\'|\")? ?>)'
+        startMORE = r"(</a><span id=morec?[0-9]+m[0-9]+ ondblclick='return swapMore\(\"c?[0-9]+m[0-9]+\"\);' style='display:none;visibility:hidden;'><a name='morec?[0-9]+m[0-9]+start'></a>)"
+        closeMORE = r"<a name='morec?[0-9]+m[0-9]+end'></a></span>"
+        movePOST = r"(<br><div><a href='http://[" + diarylink + "]+.diary.ru/p[0-9]+.htm\?down&signature=[0-9a-zA-Z]+' title='вернуть на место' onclick='return confirm\(\"Вы уверены, что хотите вернуть запись на место\?\"\);'><small>запись создана: [0-9.]+ в [0-9:]+</small></a></div>$)"
+        closePOST = r'\[close_text\][^\[]*\[\/close_text\]'
+        spanIMG = r'<span>(<img[^<]+)</span>'
+        onloadSMILE = r' onload=\"setSImg\(this\);\"'
 
         body = element.pop('message_html', '')
-        body = re.sub(fullJpost, r'[J]\1[/J]', body)
-        body = re.sub(fullJcomment, r'[J]\1[/J]', body)
+        body = re.sub(fullJ, r'[J]\1[/J]', body)
         body = re.sub(openMORE, '[MORE=', body)
         body = re.sub(startMORE, ']', body)
         body = re.sub(closeMORE, '[/MORE]', body)
         body = re.sub(movePOST, '', body)
-        element['message_src'] = body
+        body = re.sub(closePOST, '', body)
+        body = re.sub(spanIMG, r'\1', body)
+        body = re.sub(onloadSMILE, '', body)
+        element['message_html'] = body
 
     def get_all_info(self):
         while not self.__sid:
@@ -318,8 +348,8 @@ class diary_integrator:
         self.__get_account_info()
         self.__get_posts()
         self.__get_info_with_parser()
-        return self.account
         print('DONE')
+        return self.account
 
 if len(sys.argv) >= 3:
     login = sys.argv[1]

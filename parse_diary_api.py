@@ -1,6 +1,8 @@
 import json
 import requests
 import scrape
+import re
+import os
 from hashlib import md5
 from datetime import datetime
 from html.parser import HTMLParser
@@ -15,6 +17,7 @@ class diary_integrator:
         self.__login = ''
         self.__password = ''
         self.account = {}
+        self.posts = []
     def get_sid(self, login, password):
         self.__time = datetime.min
         self.__login = login.encode('windows-1251')
@@ -24,7 +27,6 @@ class diary_integrator:
         data = {'method': 'user.auth', 'username': login.encode('windows-1251'), 'password': m.hexdigest(), 'appkey': self.__api_key}
         req = self.__session.post('http://www.diary.ru/api/', data=data)
         resp = json.loads(req.content.decode())
-        self.account = {}
         if resp['result'] == '0':
             self.__time = datetime.now()
             self.__sid = resp['sid']
@@ -67,13 +69,13 @@ class diary_integrator:
         if not self.__reauth(): return
         if self.account['journal'] == '0': return self.account
 
-        fields = ['author_username', 'author_title', 'tags_data', 'access', 'jaccess', 'message_src',
+        fields = ['author_username', 'author_title', 'tags_data', 'access', 'message_src',
                   'no_comments', 'comments_count_data', 'postid',
+                  'current_music', 'current_mood', 'title',
                   'access_list', 'poll_title', 'poll_multiselect', 'poll_end',
                   'dateline_date', 'dateline_cdate']
         data={'sid':self.__sid, 'method':'post.get', 'type':'diary', 'src':1, 'fields': ','.join(fields)}
         add_data={'sid':self.__sid, 'method':'post.get', 'type':'diary', 'src':0, 'fields': 'message_html'}
-        posts = []
         ind = 0
         while 1:
             data['from'] = str(ind)
@@ -85,17 +87,19 @@ class diary_integrator:
                 add_dict = json.loads(add_req.content.decode())['posts']
             for h in dict:
                 post = {}
-                self.account['access'] = dict[h].pop('jaccess')
                 for hh in dict[h]:
                     post[hh] = dict[h][hh]
                 if self.account['journal'] == '2':
-                    post['message_src'] = add_dict[h]['message_html']
+                    post['message_html'] = add_dict[h]['message_html']
                 if self.account['journal'] == '1':
                     self.account['by-line'] = post.pop('author_title', '')
+                    post['message_html'] = post.pop('message_src')
                     post.pop('author_username', '')
                 elif post['author_username'] == self.account['username']:
                     self.account['by-line'] = post.pop('author_title', '')
                 else: post.pop('author_title', '')
+                if 'access_list' in post:
+                    post['access_list'] = post['access_list'].split('\n')
                 post['tags'] = list(post.pop('tags_data', {}).values())
                 if 'poll_title' in post:
                     post['voting'] = {
@@ -104,13 +108,13 @@ class diary_integrator:
                         'multiselect': post.pop('poll_multiselect') != '0',
                         'answers':[]
                     }
+                self.__parse_html_message(post)
                 post['comments'] = []
                 self.__get_comments(post)
-                posts.append(post)
+                self.posts.append(post)
             if len(dict) < 20: break
             ind += 20
             print('\rОбработано записей', ind, end='', flush=True)
-        self.account['posts'] = posts
         return self.account
     def __get_comments(self, post):
         if not self.__reauth(): return
@@ -122,14 +126,16 @@ class diary_integrator:
             data = {'sid': self.__sid, 'method': 'comment.get', 'postid': post['postid']}
             req = self.__session.post('http://www.diary.ru/api/', data=data)
             comments = json.loads(req.content.decode())['comments']
-            for comment in comments:
-                post['comments'].append({h: comments[comment].get(h, '') for h in fields})
+            for c in comments:
+                comment = {h: comments[c].get(h, '') for h in fields}
+                self.__parse_html_message(comment)
+                post['comments'].append(comment)
 
         return self.account
     def __get_info_with_parser(self):
         class Parser(HTMLParser):
             elem = ''
-            info = {'answers': [], 'list':[], 'white_list':[], 'black_list':[], 'tags':[], 'timezone':'0'}
+            info = {'answers': [], 'list':[], 'white_list':[], 'black_list':[], 'tags':[], 'access':'0', 'timezone':'0', 'epigraph':''}
             answer = {}
 
             def handle_starttag(self, tag, attrib):
@@ -149,8 +155,12 @@ class diary_integrator:
                     self.elem = 'exit'
                 elif tag == 'input':
                     name = next(filter(lambda x: x[0] == 'name', attrib), ('', ''))[1]
+                    checked = next(filter(lambda x: x[0] == 'checked', attrib), None)
                     if name == 'usertitle':
                         self.info['title'] = next(filter(lambda x: x[0] == 'value', attrib), ('', ''))[1]
+                    elif 'access_mode' in name and 'album' not in name and checked:
+                        value = next(filter(lambda x: x[0] == 'value', attrib), ('', ''))[1]
+                        self.info['access'] = str(int(self.info['access']) + int(value))
                 elif tag == 'textarea':
                     name = next(filter(lambda x: x[0] == 'name', attrib), ('', ''))[1]
                     if name in ['access_list', 'comments_access_list']:
@@ -234,6 +244,9 @@ class diary_integrator:
                             data.remove('')
                     self.info['tags'] = data
                     self.elem = ''
+                elif self.elem == 'epigraph':
+                    self.info['epigraph'] = data
+                    self.elem = ''
 
         parser = Parser()
 
@@ -241,7 +254,7 @@ class diary_integrator:
         self.__session.post('http://www.diary.ru/', data=data)
 
         if self.account['journal'] != '0':
-            for post in self.account['posts']:
+            for post in self.posts:
                 if 'voting' in post:
                     r = self.__session.post('http://diary.ru/~'+self.account['shortname']+'/p'+post['postid']+'.htm')
                     parser.feed(r.text)
@@ -257,22 +270,29 @@ class diary_integrator:
         self.account['by-line'] = parser.info.get('title', '')
 
         parser.elem = ''
+        parser.info['access'] = '0'
+        parser.info['list'] = []
         r = self.__session.post('http://www.diary.ru/options/member/?access')
         parser.feed(r.text)
         self.account['profile_list'] = parser.info['list']
+        self.account['profile_access'] = parser.info['access']
 
         parser.elem = ''
+        parser.info['access'] = '0'
         parser.info['list'] = []
         r = self.__session.post('http://www.diary.ru/options/diary/?access')
         parser.feed(r.text)
         self.account['journal_list'] = parser.info['list']
+        self.account['journal_access'] = parser.info['access']
 
         parser.elem = ''
+        parser.info['access'] = '0'
         parser.info['list'] = []
         parser.info['white_list'] = []
         r = self.__session.post('http://www.diary.ru/options/diary/?commentaccess')
         parser.feed(r.text)
         self.account['comment_list'] = parser.info['list']
+        self.account['comment_access'] = parser.info['access']
         self.account['white_list'] = parser.info['white_list']
 
         parser.elem = ''
@@ -295,12 +315,42 @@ class diary_integrator:
         parser.feed(r.text)
         self.account['timezone'] = parser.info['timezone']
 
+        parser.elem = ''
+        parser.info['epigraph'] = ''
+        r = self.__session.post('http://www.diary.ru/options/diary/?owner')
+        parser.feed(r.text)
+        self.account['epigraph'] = parser.info['epigraph']
+
         return self.account
+
+    def __parse_html_message(self, element):
+        if 'message_html' not in element: return
+
+        diaryname = '0-9a-zA-Zа-яА-Я\-\_\~\!\@\#\$\&\*\(\)\+\?\=\/\|\\\.\,\;\:\<\>\[\] '
+        diarylink = '0-9a-zA-Z\-\_\.\!\~\*\'\\(\)\/\:'
+        id = element.get('postid', '') + element.get('commentid', '')
+        fullJ = r'(?:<a class="TagJIco" href="(?:http://www.diary.ru|)/member/\?[0-9]+" title="профиль" target=(?:\'|\")?_blank(?:\'|\")?>(?:&nbsp;|)</a>|)<a class="TagL" href="[' + diarylink + ']+.diary.ru" title="(?:дневник: |)[' + diaryname + ']+" target=(?:\'|\")?_blank(?:\'|\")?>([' + diaryname + ']+)</a>'
+        openMORE = r'(<a href=(?:\'|\")(?:/~[' + diarylink + ']+/p[0-9]+.htm\?oam|)#more[0-9]*(?:\'|\") class=(?:\'|\")?LinkMore(?:\'|\")? on(?:c|C)lick=(?:\'|\")var e=event; if \(swapMore\(\"c?[0-9]+m[0-9]+\", e.ctrlKey \|\| e.altKey\)\) document.location = this.href; return false;(?:\'|\") id=(?:\'|\")?linkmorec?[0-9]+m[0-9]+(?:\'|\")? ?>)'
+        startMORE = r"(</a><span id=morec?[0-9]+m[0-9]+ ondblclick='return swapMore\(\"c?[0-9]+m[0-9]+\"\);' style='display:none;visibility:hidden;'><a name='morec?[0-9]+m[0-9]+start'></a>)"
+        closeMORE = r"<a name='morec?[0-9]+m[0-9]+end'></a></span>"
+        movePOST = r"(<br><div><a href='http://[" + diarylink + "]+.diary.ru/p" + id + ".htm\?down&signature=[0-9a-zA-Z]+' title='вернуть на место' onclick='return confirm\(\"Вы уверены, что хотите вернуть запись на место\?\"\);'><small>запись создана: [0-9.]+ в [0-9:]+</small></a></div>$)"
+        closePOST = r'\[close_text\][^\[]*\[\/close_text\]'
+        spanIMG = r'<span>(<img[^<]+)</span>'
+        onloadSMILE = r' onload=\"setSImg\(this\);\"'
+
+        body = element.pop('message_html', '')
+        body = re.sub(fullJ, r'[J]\1[/J]', body)
+        body = re.sub(openMORE, '[MORE=', body)
+        body = re.sub(startMORE, ']', body)
+        body = re.sub(closeMORE, '[/MORE]', body)
+        body = re.sub(movePOST, '', body)
+        body = re.sub(closePOST, '', body)
+        body = re.sub(spanIMG, r'\1', body)
+        body = re.sub(onloadSMILE, '', body)
+        element['message_html'] = body
 
     def get_all_info(self):
         while not self.__sid:
-            # print('you don\'t auth')
-            # print('call \"get_sid\" with your login and password before trying to get data')
             return
         self.__get_account_info()
         self.__get_posts()
@@ -308,9 +358,15 @@ class diary_integrator:
         self.__get_info_with_parser()
         return self.account
 
+def add_hash(data, name):
+    m = md5()
+    dataSTR = str(data)+name
+    m.update(dataSTR.encode('utf-8'))
+    data['hash'] = m.hexdigest()
+
 try:
     print('КОМАНДА ДЫБРА ПРИВЕТСТВУЕТ ВАС!')
-    print('\nПожалуйства, введите данные своей учетной записи.')
+    print('\nПожалуйста, введите данные своей учетной записи.')
     print('Ваши логин и пароль необходимы для выгрузки дневника и не будут записаны где-либо.')
     print('логин: ', end='', flush=True)
     login = input()
@@ -334,17 +390,33 @@ try:
     print('\nНачинаем выгрузку...\n')
     rez = di.get_all_info()
 
-    di.account['username']
-    json.dump(di.account, open('diary_'+login.replace(' ', '_')+'.json', 'w'), ensure_ascii=False
-              # для читаемости. Увеличивает объем выходного файла
+    dir = 'diary_' + di.account['shortname']
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    add_hash(di.account, di.account['shortname'])
+    json.dump(di.account, open(dir + '/account.json', 'w'), ensure_ascii=False
               , indent=4
               )
+    if di.posts:
+        zlen = len(str(int((len(di.posts) - 1) /20)))
+        n = 0
+        i = 0
+        while n < len(di.posts):
+            array = {'posts': di.posts[n:n+20]}
+            add_hash(array, di.account['shortname'])
+            json.dump(array, open(dir + '/posts_' + str(i).zfill(zlen) + '.json', 'w'), ensure_ascii=False
+                      , indent=4
+                      )
+            n += 20
+            i += 1
+        print()
     print('\nВыгрузка произведена успешно.')
-    print('Данные сохранены в файл diary_'+login.replace(' ', '_')+'.json')
+    print('Данные сохранены в папку '+dir)
 
     print('\nСтатистика')
     if di.account['journal'] != '0':
-        print('Количество записей:\t', len(di.account['posts']))
+        print('Количество записей:\t', len(di.posts))
     print('Время выгрузки:\t', datetime.now() - begin)
 except Exception as exc:
     file = open('error_log.txt', 'w')

@@ -1,0 +1,4 @@
+?;!@Install@!UTF-8!
+RunProgram="dist/gui/gui.exe /s"
+GUIMode="2"
+;!@InstallEnd@!
