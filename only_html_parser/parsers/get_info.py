@@ -5,7 +5,9 @@ from PyQt5.QtCore import pyqtSignal
 
 class infoParser(HTMLParser):
     obj = ''
-    info = {'tags': [], 'timezone': '0', 'day':'', 'month':'', 'year':'', 'city':'', 'epigraph':'', 'sex':'1'}
+    info = {'tags': [], 'timezone': '0', 'day':'', 'month':'', 'year':'', 'city':'', 'country':'',
+            'epigraph':'', 'journal_title':'',
+            'sex':'0', 'education':'0', 'sfera':'0', 'about':''}
     answer = {}
 
     def handle_starttag(self, tag, attrib):
@@ -90,7 +92,7 @@ def get_info(session, message):
     infoparser.feed(r.text)
     rezult['by-line'] = infoparser.info.get('title', '')
     rezult['birthday'] = '-'.join([str(infoparser.info.get(h, '')).zfill(2) for h in ['year', 'month', 'day']])
-    rezult['sex'] = {'1':'Мужской', '2':'Женский'}[infoparser.info['sex']]
+    rezult['sex'] = {'0':'', '1':'Мужской', '2':'Женский'}[infoparser.info['sex']]
     rezult['education'] = {'0':'',
                            '1':'Необразован',
                            '2':'Начальное',

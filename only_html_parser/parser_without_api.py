@@ -43,6 +43,7 @@ class Exporter(QObject):
             rezult.update(parsers.get_member_info.get_info(session, rezult['userid']))
 
             posts = parsers.get_links.get_posts_links(session, self.message)
+            posts.reverse()
 
             dir = self.path+'/diary_'+rezult['shortname']
             if not os.path.exists(dir):
