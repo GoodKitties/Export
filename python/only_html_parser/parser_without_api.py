@@ -7,11 +7,13 @@ import parsers.get_member_info
 import json
 import os
 import sys
+import requests
 from hashlib import md5
 from datetime import datetime
 from PyQt5.QtCore import QThread, QObject, pyqtSignal, pyqtSlot
 
 class Exporter(QObject):
+    session = None
     finished = pyqtSignal()
     message = pyqtSignal(str)
     login = ''
@@ -20,9 +22,12 @@ class Exporter(QObject):
 
     def create_connection(self):
         data = {'user_login': self.login.encode('windows-1251'), 'user_pass': self.pas.encode('windows-1251')}
-        session = scrape.create_scraper()
-        session.post('http://www.diary.ru/', data=data)
-        return session
+
+        self.session = scrape.CloudflareScraper().create_scraper()
+        r = self.session.post('http://www.diary.ru/', data=data)
+        if 'дневники' in r.text.lower():
+            print('diary')
+            print(r)
 
     def add_hash(self, data, name):
         m = md5()
@@ -30,22 +35,23 @@ class Exporter(QObject):
         m.update(dataSTR.encode('utf-8'))
         data['hash'] = m.hexdigest()
 
-    def generate_json(self, session):
+    def generate_json(self):
         try:
+            dir = self.path
             begin = datetime.now()
-            rezult = parsers.get_links.get_diary(session, self.message)
+            rezult = parsers.get_links.get_diary(self.session, self.message)
             if not rezult:
                 self.message.emit('Неверные логин/пароль.')
                 return
             self.message.emit('Подключение успешно.')
-            rezult.update(parsers.get_access_lists.get_access_lists(session, self.message))
-            rezult.update(parsers.get_info.get_info(session, self.message))
-            rezult.update(parsers.get_member_info.get_info(session, rezult['userid']))
+            rezult.update(parsers.get_access_lists.get_access_lists(self.session, self.message))
+            rezult.update(parsers.get_info.get_info(self.session, self.message))
+            rezult.update(parsers.get_member_info.get_info(self.session, rezult['userid']))
 
-            posts = parsers.get_links.get_posts_links(session, self.message)
+            posts = parsers.get_links.get_posts_links(self.session, self.message)
             posts.reverse()
 
-            dir = self.path+'/diary_'+rezult['shortname']
+            dir += '/diary_'+rezult['shortname']
             if not os.path.exists(dir):
                 os.makedirs(dir)
 
@@ -58,7 +64,7 @@ class Exporter(QObject):
                 n = 0
                 i = 0
                 while n < len(posts):
-                    rez = {'posts': parsers.get_diary.get_posts(session, 'http://'+rezult['shortname']+'.diary.ru', posts[n:n+20], len(posts), n, self.message)}
+                    rez = {'posts': parsers.get_diary.get_posts(self.session, 'http://'+rezult['shortname']+'.diary.ru', posts[n:n+20], len(posts), n, self.message)}
                     self.add_hash(rez, rezult['shortname'])
                     json.dump(rez, open(dir+'/posts_'+str(i).zfill(zlen)+'.json', 'w', encoding="utf-8")
                               , ensure_ascii=False
@@ -83,8 +89,11 @@ class Exporter(QObject):
         self.login = login
         self.pas = pas
         self.path = path
+        print('change')
+        if self.session:
+            self.session.close()
 
     def make_all(self):
-        session = self.create_connection()
-        self.generate_json(session)
+        self.create_connection()
+        self.generate_json()
         self.finished.emit()

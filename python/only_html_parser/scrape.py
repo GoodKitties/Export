@@ -10,6 +10,9 @@ try:
 except ImportError:
     from urllib.parse import urlparse
 
+BUG_REPORT = ("Cloudflare may have changed their technique, or there may be a bug in the script.\n\nPlease read " "https://github.com/Anorov/cloudflare-scrape#updates, then file a "
+"bug report at https://github.com/Anorov/cloudflare-scrape/issues.")
+
 DEFAULT_USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
@@ -20,12 +23,9 @@ DEFAULT_USER_AGENTS = [
 
 DEFAULT_USER_AGENT = random.choice(DEFAULT_USER_AGENTS)
 
-BUG_REPORT = ("Cloudflare may have changed their technique, or there may be a bug in the script.\n\nPlease read " "https://github.com/Anorov/cloudflare-scrape#updates, then file a "
-"bug report at https://github.com/Anorov/cloudflare-scrape/issues.")
-
-
 class CloudflareScraper(Session):
     def __init__(self, *args, **kwargs):
+
         super(CloudflareScraper, self).__init__(*args, **kwargs)
 
         if "requests" in self.headers["User-Agent"]:
@@ -47,7 +47,7 @@ class CloudflareScraper(Session):
         return resp
 
     def solve_cf_challenge(self, resp, **original_kwargs):
-        sleep(5)  # Cloudflare requires a delay before solving the challenge
+        # sleep(5)  # Cloudflare requires a delay before solving the challenge
 
         body = resp.text
         parsed_url = urlparse(resp.url)
@@ -78,7 +78,11 @@ class CloudflareScraper(Session):
         # performing other types of requests even as the first request.
         method = resp.request.method
         cloudflare_kwargs["allow_redirects"] = False
-        redirect = self.request(method, submit_url, **cloudflare_kwargs)
+        # redirect = self.request(method, submit_url, **cloudflare_kwargs)
+
+        import requests
+        redirect = requests.post(submit_url, **{'params':params, 'headers':{"User-Agent": DEFAULT_USER_AGENT}, 'allow_redirects': False})
+
 
         redirect_location = urlparse(redirect.headers["Location"])
         if not redirect_location.netloc:
@@ -167,6 +171,5 @@ class CloudflareScraper(Session):
         tokens, user_agent = cls.get_tokens(url, user_agent=user_agent, **kwargs)
         return "; ".join("=".join(pair) for pair in tokens.items()), user_agent
 
-create_scraper = CloudflareScraper.create_scraper
-get_tokens = CloudflareScraper.get_tokens
-get_cookie_string = CloudflareScraper.get_cookie_string
+    def close(self):
+        self = None

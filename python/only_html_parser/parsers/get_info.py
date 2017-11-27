@@ -6,7 +6,7 @@ from PyQt5.QtCore import pyqtSignal
 class infoParser(HTMLParser):
     obj = ''
     info = {'tags': [], 'timezone': '0', 'day':'', 'month':'', 'year':'', 'city':'', 'country':'',
-            'epigraph':'', 'journal_title':'',
+            'epigraph':'', 'journal-title':'',
             'sex':'0', 'education':'0', 'sfera':'0', 'about':''}
     answer = {}
 

@@ -36,8 +36,13 @@ class linkParser(HTMLParser):
             elif self.obj == 'name':
                 self.info['userid'] = href[href.find('?')+1:]
             elif self.obj == 'diary':
-                self.info['shortname'] = href[0 + 7 * ('http://' in href):href.find('.diary.ru')]
-                self.links['diary'] = href
+                if href in ['', 'http://www.diary.ru/new/', 'www.diary.ru/new/', 'http://www.diary.ru/new', 'www.diary.ru/new', '/new/', '/new']:
+                    self.info['shortname'] = ''
+                    self.links['diary'] = ''
+                else:
+                    print(href)
+                    self.info['shortname'] = href[0 + 7 * ('http://' in href):href.find('.diary.ru')]
+                    self.links['diary'] = href
         pass
     def handle_endtag(self, tag):
         pass
