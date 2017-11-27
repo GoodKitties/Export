@@ -149,10 +149,9 @@ public class Diary_exporter implements Runnable {
             String name = fList1.getName();
             if(name.equals("images.json")) {
                 object = (JSONObject) parser.parse(new FileReader(dir+"\\"+name));
-                String file_hash = (String) object.remove("hash");
-                String json = object.toJSONString().replaceAll("\\\\/", "/");
-                String hash = createhash(json);
-                boolean eq = file_hash.equals(hash);
+                
+                if(!object.containsKey("hash"))
+                    frame.printErrorInfo(1);
                 
                 for (Object key : object.keySet()) {
                     //based on you key types
