@@ -31,8 +31,13 @@ public class Post_parser {
         
         String page = "/~"+shortname;            
         while(!page.equals("")) {
-            Document doc = Jsoup.parse(h.get("http://www.diary.ru"+page));
-            page = "";           
+            String bodystring = h.get("http://www.diary.ru"+page); 
+            page = "";       
+            if(bodystring.equals(h.null_message)) {
+                Diary_exporter.frame.printErrorInfo(0);
+                continue;
+            }
+            Document doc = Jsoup.parse(bodystring);         
             Element next_page = doc.getElementById("pageBar");
             if(next_page != null) {
                 next_page = next_page.getElementsByAttributeValue("class", "pages_str")
@@ -66,6 +71,10 @@ public class Post_parser {
             Post post = new Post();
             post.postid = p;
             String bodystring = h.get("http://www.diary.ru/~"+shortname+"/?editpost&postid="+p);
+            if(bodystring.equals(h.null_message)) {
+                Diary_exporter.frame.printErrorInfo(0);
+                continue;
+            }
             Document doc = Jsoup.parse(bodystring); 
             Element title = doc.getElementById("postTitle");    
             if (title == null) {
@@ -126,7 +135,12 @@ public class Post_parser {
                 post.access_list = access_list.nextSibling().toString().split("\\\\n");   
             }
             
-            doc = Jsoup.parse(h.get("http://www.diary.ru/~"+shortname+"/p"+p+".html"));  
+            bodystring = h.get("http://www.diary.ru/~"+shortname+"/p"+p+".html");
+            if(bodystring.equals(h.null_message)) {
+                Diary_exporter.frame.printErrorInfo(0);
+                continue;
+            }
+            doc = Jsoup.parse(bodystring);
             Element post_body = doc.getElementById("post"+p);
             Elements date = post_body.getElementsByTag("span");
             post.dateline_date = date.get(0).childNode(0).toString() + 
@@ -143,8 +157,13 @@ public class Post_parser {
             if(vot_link.size() > 0 || vot_block.size() > 0) {                
                 Element voting_question, voting_table;
                 if (vot_link.size() > 0) {
-                    String link = vot_link.last().attr("href");
-                    Document vot_doc = Jsoup.parse(h.get("http://www.diary.ru"+link));
+                    String link = vot_link.last().attr("href");                    
+                    bodystring = h.get("http://www.diary.ru"+link);      
+                    if(bodystring.equals(h.null_message)) {
+                        Diary_exporter.frame.printErrorInfo(0);
+                        continue;
+                    }
+                    Document vot_doc = Jsoup.parse(bodystring);
                     voting_question = vot_doc.body();
                     voting_table = vot_doc.getElementsByTag("table").first();
                 } else {                    
@@ -247,10 +266,13 @@ public class Post_parser {
         for(Element img: imgs) {
             String img_src = img.attr("src");
             if(!img_src.contains("static.diary.ru")) continue;
+            img_src = img.attr("src").substring(img.attr("src").lastIndexOf("http://")).replaceAll("\"", "");
             if(Smile.links.contains(img_src)) continue;
             Diary_exporter.frame.printInfo("<html>Получение изображений<br>"+img_src+"</html>");
             if(image_gallery.containsKey(img_src)) continue;
-            image_gallery.put(img_src, h.get(img_src, true));
+            String image = h.get(img_src, true);
+            if(image.equals(h.null_message)) continue;
+            image_gallery.put(img_src, image);
             Diary_exporter.createJson(image_gallery, dir);
         }
     }

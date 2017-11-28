@@ -5,10 +5,12 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,9 +46,9 @@ public class Diary_exporter implements Runnable {
             md = MessageDigest.getInstance("MD5");
             md.reset();  
             md.update((json+shortname).getBytes("windows-1251"));
-        } catch (Exception ex) {
+        } catch (UnsupportedEncodingException | NoSuchAlgorithmException ex) {
             frame.printInfo("<html>Ошибка при подготовке к аутентификации.</html>");
-            logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+            Diary_exporter.logger.log(Level.SEVERE, "Ошибка при подготовке к аутентификации.", ex);
         }
         byte[] digest = md.digest();
         BigInteger bigInt = new BigInteger(1,digest);
@@ -208,11 +210,11 @@ public class Diary_exporter implements Runnable {
                 fh = new FileHandler(dir+"/diary_exporter_log_file.log");  
                 logger.addHandler(fh);
                 SimpleFormatter formatter = new SimpleFormatter();  
-                fh.setFormatter(formatter);  
+                fh.setFormatter(formatter); 
             } catch (Exception ex) {
                 frame.printInfo("<html>Ошибка при создании лог-файла.</html>");
-                frame.printErrorInfo(2);
-                Diary_exporter.logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+                frame.printErrorInfo(-1);
+                Diary_exporter.logger.log(Level.SEVERE, "Ошибка при создании лог-файла.", ex);
             }          
             
             Diary_exporter.logger.info("cookie creation");      
@@ -225,7 +227,7 @@ public class Diary_exporter implements Runnable {
             } catch (Exception ex) {
                 frame.printInfo("<html>Ошибка при подготовке к аутентификации.</html>");
                 frame.printErrorInfo(2);
-                Diary_exporter.logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+                Diary_exporter.logger.log(Level.SEVERE, "Ошибка при подготовке к аутентификации.", ex);
             }
             byte[] digest = md.digest();
             BigInteger bigInt = new BigInteger(1,digest);
@@ -248,7 +250,7 @@ public class Diary_exporter implements Runnable {
             } catch (Exception ex) {
                 frame.printInfo("<html>Ошибка аутентификации.<br>Ваши логин/пароль не верны или случилось что-то непредвиденное.</html>");
                 frame.printErrorInfo(2);
-                logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+                Diary_exporter.logger.log(Level.SEVERE, "Ошибка аутентификации.<br>Ваши логин/пароль не верны или случилось что-то непредвиденное.", ex);
                 //throw new Error();
             }
             
@@ -279,7 +281,7 @@ public class Diary_exporter implements Runnable {
                 } catch (Exception ex) {                    
                     frame.printInfo("<html>Что-то пошло не так при сохранении данных аккаунта.</html>");
                     frame.printErrorInfo(2);
-                    Diary_exporter.logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+                    Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так при сохранении данных аккаунта.", ex);
                     throw new Error();
                 }
                 
@@ -291,8 +293,8 @@ public class Diary_exporter implements Runnable {
                     } catch (Exception ex) {                   
                         frame.printInfo("<html>Что-то пошло не так при обработке уже имеющихся данных.</html>");
                         frame.printErrorInfo(2);
-                        Diary_exporter.logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
-                        throw new Error();
+                        Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так при обработке уже имеющихся данных.", ex);
+                        //throw new Error();
                     }
                 }
                 
@@ -301,7 +303,7 @@ public class Diary_exporter implements Runnable {
                 } catch (Exception ex) {
                     frame.printInfo("<html>Что-то пошло не так, когда выгружались посты.</html>");
                     frame.printErrorInfo(2);
-                    Diary_exporter.logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+                    Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались посты.", ex);
                     throw new Error();
                 }
             
@@ -310,13 +312,10 @@ public class Diary_exporter implements Runnable {
                     try {                
                         frame.printInfo("Начинается выгрузка изображений");
                         image_gallery = Post_parser.loadAllImages(h, posts, image_gallery, dir);
-                        if(!acc.avatar.equals("") && !image_gallery.containsKey(acc.avatar)) {
-                            image_gallery.put(acc.avatar, h.get(acc.avatar, true));
-                        }
                     } catch (Exception ex) {
                         frame.printInfo("<html>Что-то пошло не так, когда выгружались изображения.</html>");
                         frame.printErrorInfo(2);
-                        Diary_exporter.logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+                        Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались изображения.", ex);
                         throw new Error();
                     }                
 
@@ -330,7 +329,7 @@ public class Diary_exporter implements Runnable {
                             } catch(Exception ex) {
                                 frame.printInfo("<html>Что-то пошло не так, когда выгружались изображения.</html>");
                                 frame.printErrorInfo(2);
-                                Diary_exporter.logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+                                Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались изображения.", ex);
                                 throw new Error();
                             }
                         }
@@ -344,7 +343,7 @@ public class Diary_exporter implements Runnable {
                     } catch (Exception ex) {
                         frame.printInfo("<html>Что-то пошло не так, когда выгружалась аватарка.</html>");
                         frame.printErrorInfo(2);
-                        Diary_exporter.logger.log(Level.INFO, "{0} {1} {2} {3}", new Object[]{ex.getMessage(), ex.getStackTrace()[0].getClassName(), ex.getStackTrace()[0].getFileName(), ex.getStackTrace()[0].getLineNumber()});
+                        Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружалась аватарка.", ex);
                         throw new Error();
                     }
                     Diary_exporter.logger.info("image loading stop");

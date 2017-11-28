@@ -17,11 +17,13 @@ import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.Random;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Html_getter {  
     public String directory;
+    public String null_message = "error_null_page";
     public int max_img_file = -1;
     private String user_cookie = "";
     private String cookie = "";
@@ -143,6 +145,11 @@ public class Html_getter {
                     getAttr("pass", "(.+?)", line), 
                     (cloudflareKey(line) + url.getHost().length())+"",
                     image);            
+        }
+        else if(connection.getResponseCode() != 200) {
+            System.out.println("страница не найдена "+url.toString());
+            Diary_exporter.logger.log(Level.INFO, "страница не найдена "+url.toString());
+            return null_message;
         }
         else if (image) {
             BufferedInputStream in = new BufferedInputStream(connection.getInputStream());

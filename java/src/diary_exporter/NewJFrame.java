@@ -24,6 +24,14 @@ public class NewJFrame extends javax.swing.JFrame {
     }
     public void printErrorInfo(int i) {
         switch(i) {
+            case -1:
+                errorText.setText("Не удалось создать лог-файл");
+                errorText.setVisible(true);
+                break;
+            case 0:
+                errorText.setText("diary не ответил на запрос. Попробуйте перезапустить программу еще раз позже.");
+                errorText.setVisible(true);
+                break;
             case 1:
                 errorText.setText("В старых файлах нет поля хэша. Лучше выкачайте их заново.");
                 errorText.setVisible(true);
