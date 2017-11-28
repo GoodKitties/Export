@@ -65,7 +65,8 @@ public class Post_parser {
         for(String p: ids) {
             Post post = new Post();
             post.postid = p;
-            Document doc = Jsoup.parse(h.get("http://www.diary.ru/~"+shortname+"/?editpost&postid="+p)); 
+            String bodystring = h.get("http://www.diary.ru/~"+shortname+"/?editpost&postid="+p);
+            Document doc = Jsoup.parse(bodystring); 
             Element title = doc.getElementById("postTitle");    
             if (title == null) {
                 all--;
@@ -105,11 +106,7 @@ public class Post_parser {
                 if (el.hasAttr("checked")) {
                     post.access = ""+(Integer.parseInt(post.access) + Integer.parseInt(el.attr("value")));
                 }
-            }
-            Element access_list = doc.getElementById("access_list3");
-            if(access_list != null) {
-                post.access_list = access_list.nextSibling().toString().split("\n");   
-            }
+            }            
             
             Elements tags = doc.getElementById("my_tags").getElementsByTag("input");
             for(Element tag: tags) {
@@ -122,6 +119,13 @@ public class Post_parser {
                 post.tags.add(tag);
             }
 
+            bodystring = bodystring.replaceAll("\\n", "\\\\n");
+            doc = Jsoup.parse(bodystring); 
+            Element access_list = doc.getElementById("access_list3");
+            if(access_list != null) {
+                post.access_list = access_list.nextSibling().toString().split("\\\\n");   
+            }
+            
             doc = Jsoup.parse(h.get("http://www.diary.ru/~"+shortname+"/p"+p+".html"));  
             Element post_body = doc.getElementById("post"+p);
             Elements date = post_body.getElementsByTag("span");
