@@ -54,6 +54,8 @@ class postParser(HTMLParser):
             if id == 'postTitle':
                 self.post['title'] = value
             elif self.obj == 'tags' and checked:
+                print(name, value, checked != None)
+                print(attrib)
                 self.post['tags'].append(value)
             elif name == 'themes' and value:
                 self.post['tags'] += value.split(';')
@@ -71,8 +73,11 @@ class postParser(HTMLParser):
                 self.post.get('voting', {})['end'] = checked != None
             elif name == 'no_comments' and checked:
                 self.post['no_comments'] = '1'
-            elif 'close_access_mode' in name and checked:
-                self.post['access'] = str(int(self.post['access']) + int(value))
+            elif 'close_access_mode' in name:
+                # print(name, value, checked != None)
+                # print(attrib)
+                if checked != None:
+                    self.post['access'] = str(int(self.post['access']) + int(value))
         elif tag == 'span':
             if 'postdate' in self.obj:
                 self.obj += '_'
@@ -99,7 +104,7 @@ class postParser(HTMLParser):
                     self.obj = ''
             self.answer = {}
     def handle_endtag(self, tag):
-        if tag == 'ul' and self.obj == 'tags':
+        if tag in ['ul', 'div'] and self.obj == 'tags':
             self.obj = ''
         elif tag == 'div' and self.obj == 'accesslist':
             self.obj = ''
