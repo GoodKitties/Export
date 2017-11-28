@@ -63,7 +63,7 @@ public class Diary_exporter implements Runnable {
         image_gallery.entrySet().forEach((entry) -> {
             jsonObject.put(entry.getKey(), entry.getValue());
         });
-        try (FileWriter file = new FileWriter(dir + "\\images.json")) {
+        try (FileWriter file = new FileWriter(dir + "/images.json")) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createhash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
@@ -74,7 +74,7 @@ public class Diary_exporter implements Runnable {
         for (Field field : Account.fields) {
             jsonObject.put(field.getName(), createJsonElement(field.get(acc)));
         }
-        try (FileWriter file = new FileWriter(dir + "\\account.json")) {
+        try (FileWriter file = new FileWriter(dir + "/account.json")) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createhash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
@@ -92,7 +92,7 @@ public class Diary_exporter implements Runnable {
             arr.add(jsonPostObject);
         }
         jsonObject.put("posts", arr);
-        try (FileWriter file = new FileWriter(dir + "\\posts_" + filenumber + ".json")) {
+        try (FileWriter file = new FileWriter(dir + "/posts_" + filenumber + ".json")) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createhash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
@@ -148,7 +148,7 @@ public class Diary_exporter implements Runnable {
             }
             String name = fList1.getName();
             if(name.equals("images.json")) {
-                object = (JSONObject) parser.parse(new FileReader(dir+"\\"+name));
+                object = (JSONObject) parser.parse(new FileReader(dir+"/"+name));
                 
                 if(!object.containsKey("hash"))
                     frame.printErrorInfo(1);
@@ -161,7 +161,7 @@ public class Diary_exporter implements Runnable {
                 }
                 continue;
             } else if(!name.contains("posts_")) continue;
-            object = (JSONObject) parser.parse(new FileReader(dir+"\\"+name));
+            object = (JSONObject) parser.parse(new FileReader(dir+"/"+name));
 
             if(!object.containsKey("hash"))
                 frame.printErrorInfo(1);
@@ -174,7 +174,7 @@ public class Diary_exporter implements Runnable {
         }
         
         if(frame.checkLoaded()) {
-            F = new File(dir+"\\Images");
+            F = new File(dir+"/Images");
             fList = F.listFiles();
 
             for (File fList1 : fList) {
@@ -197,7 +197,7 @@ public class Diary_exporter implements Runnable {
         String pass = frame.getPass();
         String dir = frame.getDir();
         
-        dir = dir.replaceAll("/", "\\\\");
+        dir = dir.replaceAll("\\\\", "/");
         
                 
         if(!login.equals("") && !pass.equals("") && !dir.equals(""))
@@ -205,7 +205,7 @@ public class Diary_exporter implements Runnable {
             frame.printInfo("<html>Подключение.<br>Может потребоваться некоторое время на установку cоединения и создание лог-файла.</html>");
             try {  
                 FileHandler fh;  
-                fh = new FileHandler(dir+"\\\\diary_exporter_log_file.log");  
+                fh = new FileHandler(dir+"/diary_exporter_log_file.log");  
                 logger.addHandler(fh);
                 SimpleFormatter formatter = new SimpleFormatter();  
                 fh.setFormatter(formatter);  
@@ -264,14 +264,14 @@ public class Diary_exporter implements Runnable {
                 shortname = acc.shortname;
                 logger.info("creation dirs");
                 File myPath;
-                dir += "\\diary_"+acc.shortname;
+                dir += "/diary_"+acc.shortname;
                 if(frame.loadImage()) {
-                    myPath = new File(dir+"\\Images");  
+                    myPath = new File(dir+"/Images");  
                 } else {
                     myPath = new File(dir);   
                 }
                 myPath.mkdirs();
-                h.setDirectory(dir+"\\Images");   
+                h.setDirectory(dir+"/Images");   
                 
                 Diary_exporter.logger.info("save accout");
                 try {                    
