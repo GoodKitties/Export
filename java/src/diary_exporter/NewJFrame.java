@@ -37,7 +37,7 @@ public class NewJFrame extends javax.swing.JFrame {
                 errorText.setVisible(true);
                 break;
             case 2:
-                errorText.setText("Во время выкачки произошли ошибки. Вы можете отправить отчет в группу вконтакте vk.com/aboutdybr\nФайл отчета diary_exporter_log_file.log");
+                errorText.setText("Во время выкачки произошли ошибки. Вы можете отправить отчет в группу вконтакте vk.com/aboutdybr или на почту support@dybr.ru\nФайл отчета diary_exporter_log_file.log");
                 errorText.setVisible(true);
                 break;
         }
