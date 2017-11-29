@@ -149,7 +149,7 @@ public class Account_parser {
     }
     private static void member_step(Html_getter h, Account acc) throws IOException, MalformedURLException, InterruptedException {
         Document doc = Jsoup.parse(h.get("http://www.diary.ru/member/?"+acc.userid+"&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
-
+                
         Elements avatar = doc.getElementById("contant").child(2).getElementsByTag("img");
         if(avatar.size() > 0) {
             acc.avatar = avatar.first().attr("src");
@@ -174,9 +174,15 @@ public class Account_parser {
                     m = el.nextElementSibling().getElementsByTag("a");
                     acc.communities = new String[m.size() - 2];
                     for(int j = 1; j < m.size()-1; j++) {
-                        String s = m.get(j).childNode(0).toString();
-                        if(s.indexOf("<font color=\"red\">") == 0) {
-                            s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                        Element elem = m.get(j);
+                        String s;
+                        if(elem.childNodeSize() > 0) {
+                            s = elem.childNode(0).toString();
+                            if(s.indexOf("<font color=\"red\">") == 0) {
+                                s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                            }
+                        } else {
+                            s = elem.attr("href");
                         }
                         acc.communities[j-1] = s;
                     }
@@ -185,9 +191,15 @@ public class Account_parser {
                     m = el.nextElementSibling().getElementsByTag("a");
                     acc.favourites = new String[m.size() - 2];
                     for(int j = 1; j < m.size()-1; j++) {
-                        String s = m.get(j).childNode(0).toString();
-                        if(s.indexOf("<font color=\"red\">") == 0) {
-                            s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                        Element elem = m.get(j);
+                        String s;
+                        if(elem.childNodeSize() > 0) {
+                            s = elem.childNode(0).toString();
+                            if(s.indexOf("<font color=\"red\">") == 0) {
+                                s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                            }
+                        } else {
+                            s = elem.attr("href");
                         }
                         acc.favourites[j-1] = s;
                     }
@@ -196,9 +208,15 @@ public class Account_parser {
                     m = el.nextElementSibling().getElementsByTag("a");
                     acc.readers = new String[m.size() - 2];
                     for(int j = 1; j < m.size()-1; j++) {
-                        String s = m.get(j).childNode(0).toString();
-                        if(s.indexOf("<font color=\"red\">") == 0) {
-                            s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                        Element elem = m.get(j);
+                        String s;
+                        if(elem.childNodeSize() > 0) {
+                            s = elem.childNode(0).toString();
+                            if(s.indexOf("<font color=\"red\">") == 0) {
+                                s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                            }
+                        } else {
+                            s = elem.attr("href");
                         }
                         acc.readers[j-1] = s;
                     }
@@ -207,9 +225,15 @@ public class Account_parser {
                     m = el.nextElementSibling().getElementsByTag("a");
                     acc.members = new String[m.size() - 2];
                     for(int j = 1; j < m.size()-1; j++) {
-                        String s = m.get(j).childNode(0).toString();
-                        if(s.indexOf("<font color=\"red\">") == 0) {
-                            s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                        Element elem = m.get(j);
+                        String s;
+                        if(elem.childNodeSize() > 0) {
+                            s = elem.childNode(0).toString();
+                            if(s.indexOf("<font color=\"red\">") == 0) {
+                                s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                            }
+                        } else {
+                            s = elem.attr("href");
                         }
                         acc.members[j-1] = s;
                     }
@@ -218,9 +242,15 @@ public class Account_parser {
                     m = el.nextElementSibling().getElementsByTag("a");
                     acc.owners = new String[m.size() - 2];
                     for(int j = 1; j < m.size()-1; j++) {
-                        String s = m.get(j).childNode(0).toString();
-                        if(s.indexOf("<font color=\"red\">") == 0) {
-                            s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                        Element elem = m.get(j);
+                        String s;
+                        if(elem.childNodeSize() > 0) {
+                            s = elem.childNode(0).toString();
+                            if(s.indexOf("<font color=\"red\">") == 0) {
+                                s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                            }
+                        } else {
+                            s = elem.attr("href");
                         }
                         acc.owners[j-1] = s;
                     }
@@ -229,9 +259,15 @@ public class Account_parser {
                     m = el.nextElementSibling().getElementsByTag("a");
                     acc.moderators = new String[m.size() - 2];
                     for(int j = 1; j < m.size()-1; j++) {
-                        String s = m.get(j).childNode(0).toString();
-                        if(s.indexOf("<font color=\"red\">") == 0) {
-                            s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                        Element elem = m.get(j);
+                        String s;
+                        if(elem.childNodeSize() > 0) {
+                            s = elem.childNode(0).toString();
+                            if(s.indexOf("<font color=\"red\">") == 0) {
+                                s = s.substring(s.indexOf(">")+1, s.lastIndexOf("<"));
+                            }
+                        } else {
+                            s = elem.attr("href");
                         }
                         acc.moderators[j-1] = s;
                     }
