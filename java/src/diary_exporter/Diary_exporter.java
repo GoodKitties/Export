@@ -260,6 +260,8 @@ public class Diary_exporter implements Runnable {
                 if (acc.journal.equals("0")) {
                     frame.printInfo("Похоже, вы не ведете ни дневник, ни сообщество."); 
                     logger.info("no diary");
+                } else {
+                    frame.printInfo("<html>Ошибка аутентификации.</html>"); 
                 }
                 acc.journal = "0";
             } else { 

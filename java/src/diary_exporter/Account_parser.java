@@ -17,7 +17,10 @@ public class Account_parser {
         
         Diary_exporter.logger.info("Account_parser start");
         Diary_exporter.logger.info("first_step");   
-        first_step(h, acc);
+        int all_right = first_step(h, acc);
+        if(all_right != 0 || acc.shortname.equals("")) {
+            return acc;
+        }
         Diary_exporter.logger.info("profile_list_step");   
         profile_list_step(h, acc);  
         Diary_exporter.logger.info("journal_list_step");   
@@ -41,18 +44,26 @@ public class Account_parser {
         return acc;
     }
     
-    private static void first_step(Html_getter h, Account acc) throws IOException, MalformedURLException, InterruptedException {
+    private static int first_step(Html_getter h, Account acc) throws IOException, MalformedURLException, InterruptedException {
         String str = h.get("http://www.diary.ru/");
         
         Document doc = Jsoup.parse(str);
 
         Element inf_menu = doc.getElementById("inf_menu");
         Element m_menu = doc.getElementById("m_menu");
-        if(inf_menu == null || m_menu == null) {
+        Element main_menu = doc.getElementById("main_menu");        
+        String link_to_member;
+        Element link_to_diary;
+        if(inf_menu != null && m_menu != null) {
+            link_to_member = inf_menu.getElementsByTag("a").first().attr("href");
+            link_to_diary = m_menu.getElementsByTag("a").first();
+        } else if(main_menu != null) {
+            link_to_member = main_menu.getElementsByTag("a").get(8).attr("href");
+            link_to_diary = main_menu.getElementsByTag("a").first();
+        } else {            
             Diary_exporter.logger.info("have no access");
-        }        
-        String link_to_member = inf_menu.getElementsByTag("a").first().attr("href");
-        Element link_to_diary = m_menu.getElementsByTag("a").first();
+            return 1;
+        }
         String journal = "";
         if(link_to_diary != null && link_to_diary.childNodeSize() > 0) {
             journal = link_to_diary.childNode(0).toString();
@@ -71,9 +82,13 @@ public class Account_parser {
             case "Завести дневник":
                 acc.journal = "0";
                 break;
+            default:
+                Diary_exporter.logger.info("have no access");
+                return 1;
         }
 
         acc.userid = link_to_member.substring(link_to_member.indexOf("?")+1);
+        return 0;
     }
     private static void profile_list_step(Html_getter h, Account acc) throws IOException, MalformedURLException, InterruptedException {
         Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/member/?access"));
@@ -150,7 +165,12 @@ public class Account_parser {
     private static void member_step(Html_getter h, Account acc) throws IOException, MalformedURLException, InterruptedException {
         Document doc = Jsoup.parse(h.get("http://www.diary.ru/member/?"+acc.userid+"&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
                 
-        Elements avatar = doc.getElementById("contant").child(2).getElementsByTag("img");
+        Element contant = doc.getElementById("contant");
+        if(contant == null) {
+            contant = doc.getElementById("lm_right_content");
+        }
+        
+        Elements avatar = contant.child(2).getElementsByTag("img");
         if(avatar.size() > 0) {
             acc.avatar = avatar.first().attr("src");
         }
