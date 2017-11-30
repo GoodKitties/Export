@@ -123,9 +123,12 @@ public class Post_parser {
                     post.tags.add(tag.attr("value"));
                 }
             }
-            String[] add_tags = doc.getElementById("tags").attr("value").split(";");
-            for(String tag: add_tags) {
-                post.tags.add(tag);
+            Element add_tags_field = doc.getElementById("tags");
+            if(add_tags_field != null) {
+                String[] add_tags = add_tags_field.attr("value").split(";");
+                for(String tag: add_tags) {
+                    post.tags.add(tag);
+                }
             }
 
             bodystring = bodystring.replaceAll("\\n", "\\\\n");
