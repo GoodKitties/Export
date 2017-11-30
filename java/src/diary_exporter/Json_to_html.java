@@ -38,9 +38,9 @@ public class Json_to_html implements Runnable {
                 continue;
             }
             String name = fList1.getName();
+            frame.printHtmlInfo("<html>Разбор файлов, подождите...<br>name</html>");
             if(name.equals("account.json")) {
                 account = "account.json";
-                
             }
             if(!name.contains("posts_")) continue;
             posts.add(name);
@@ -58,6 +58,7 @@ public class Json_to_html implements Runnable {
         dir = dir.replaceAll("\\\\", "/");
         
         if(!dir.equals("")) {
+            frame.printHtmlInfo("Разбор файлов, подождите...");
             getReady(dir);
             if(!account.equals("")) {
                 File myPath;
@@ -82,8 +83,9 @@ public class Json_to_html implements Runnable {
                         try (FileWriter file = new FileWriter(dir + "_html/html_" + p + ".html")) {
                             file.write(page.replaceAll("\\\\/", "/"));
                         }
-                    }
-                    
+                        int percent = (i+1) / posts.size();
+                        frame.printHtmlInfo("Созание страниц " + percent + "%");
+                    }                    
                 } catch (FileNotFoundException ex) {
                     Logger.getLogger(Json_to_html.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException ex) {
@@ -93,6 +95,7 @@ public class Json_to_html implements Runnable {
                 }
             }
         }
+        frame.printHtmlInfo("Готово");
         frame.changeHtmlEnabled();
         return;
     }
@@ -253,6 +256,10 @@ public class Json_to_html implements Runnable {
                 "		width: 1.7em;  \n" +
                 "		height: 1.7em;\n" +
                 "		text-align: center;\n" +
+                "	}\n" + 
+                "	.postlink {\n" +
+                "		cursor: pointer;\n" +
+                "		text-decoration: underline;\n" +
                 "	}\n" +
                 "</style>\n" +
                 "<script src=\"https://d3js.org/d3.v4.min.js\"></script>\n" +
@@ -373,7 +380,8 @@ public class Json_to_html implements Runnable {
                 "	\n" +
                 "	data[\"posts\"].forEach(function(item, i) {	  \n" +
                 "		var p = document.createElement('p')\n" +
-                "		p.setAttribute('value', i)\n" +
+                "		p.setAttribute('value', i)\n" + 
+                "		p.setAttribute('class', 'postlink')\n" +
                 "		p.onclick = function showdata() {\n" +
                 "			clear(post)\n" +
                 "			item[\"message_html\"] = editMessage(item[\"message_html\"], true)\n" +
