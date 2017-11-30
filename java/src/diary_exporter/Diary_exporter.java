@@ -196,6 +196,7 @@ public class Diary_exporter implements Runnable {
         posts = new ArrayList<>();
         
         String login = frame.getLogin();
+        String loginutf = login;
         String pass = frame.getPass();
         String dir = frame.getDir();
         
@@ -220,7 +221,7 @@ public class Diary_exporter implements Runnable {
             Diary_exporter.logger.info("cookie creation");      
             MessageDigest md = null;
             try {
-                login = URLEncoder.encode(login, "windows-1251");
+                loginutf = URLEncoder.encode(login, "windows-1251");
                 md = MessageDigest.getInstance("MD5");
                 md.reset();  
                 md.update(pass.getBytes("windows-1251"));
@@ -236,7 +237,7 @@ public class Diary_exporter implements Runnable {
               hashtext = "0"+hashtext;
             }
 
-            h = new Html_getter(login, hashtext);            
+            h = new Html_getter(loginutf, hashtext);            
             ready = new JSONArray();
             ready_ids = new ArrayList<>();
             
@@ -244,7 +245,8 @@ public class Diary_exporter implements Runnable {
             h.max_img_file = -1;
 
             try {
-                acc = Account_parser.getAccount(h, login);
+                acc = Account_parser.getAccount(h, loginutf);
+                acc.username = login; 
                 frame.printInfo("Данные аккаунта получены");
                 Diary_exporter.logger.info("account ready");
             } catch (Exception ex) {
