@@ -8,6 +8,7 @@ public class Post {
     public List<String> tags = new ArrayList<String>();
     public List<Comment> comments = new ArrayList<Comment>();
     public String no_comments = "0";
+    public String author_username = "";
     public String current_music = "";
     public String current_mood = "";
     public String access = "0";

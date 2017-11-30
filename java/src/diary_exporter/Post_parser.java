@@ -5,6 +5,7 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
@@ -149,6 +150,20 @@ public class Post_parser {
             post.dateline_date = date.get(0).childNode(0).toString() + 
                     ", " + date.get(1).childNode(0).toString();
             post.dateline_cdate = post.dateline_date;
+            Elements author = post_body.getElementsByClass("authorName");
+            if(author != null) {
+                author = author.first().children();
+                if(author != null) {
+                    Element a = author.last();
+                    if(a.childNodeSize() > 0) {
+                        a = a.child(0);
+                        if(a.childNodeSize() > 0) {
+                            post.author_username = a.childNode(0).toString();
+                        }
+                    }
+                }
+            }
+            
             Element ret = post_body.getElementsByAttributeValue("onclick", "return confirm(\"Вы уверены, что хотите вернуть запись на место?\");").last();
             if(ret != null) {
                 String cdate = ret.child(0).toString();
@@ -259,6 +274,7 @@ public class Post_parser {
         return image_gallery;
     }
     public static void loadImages(Html_getter h, Post post, Map<String,String> image_gallery, String dir) throws IOException, MalformedURLException, InterruptedException, IllegalArgumentException, IllegalAccessException {
+        Diary_exporter.logger.log(Level.INFO, "изображения из "+post.postid);
         loadImage(h, post.message_html, image_gallery, dir);
         for(Comment com: post.comments) {
             loadImage(h, com.message_html, image_gallery, dir);

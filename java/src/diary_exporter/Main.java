@@ -10,6 +10,5 @@ import java.security.NoSuchAlgorithmException;
 public class Main{      
     public static void main(String[] args) throws UnsupportedEncodingException, InterruptedException, IOException, NoSuchAlgorithmException { 
         NewJFrame frame = new NewJFrame();
-        Diary_exporter dex = new Diary_exporter(frame);
     }
 }

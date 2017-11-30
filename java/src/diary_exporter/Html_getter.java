@@ -155,6 +155,11 @@ public class Html_getter {
             BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
             String[] temp = url.getFile().split("/");
             temp = temp[temp.length - 1].split("\\.");            
+            if(temp[temp.length - 1].contains("?")) {
+                System.out.println("страница не найдена "+url.toString());
+                Diary_exporter.logger.log(Level.INFO, "страница не найдена "+url.toString());
+                return null_message;
+            }
             max_img_file += 1;
             BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream( directory + "/image_" + max_img_file + "." + temp[temp.length - 1]));
             int i;
