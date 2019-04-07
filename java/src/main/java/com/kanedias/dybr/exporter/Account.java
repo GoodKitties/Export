@@ -1,4 +1,4 @@
-package diary_exporter;
+package com.kanedias.dybr.exporter;
 
 import java.lang.reflect.Field;
 
@@ -35,8 +35,4 @@ public class Account {
     public String[] owners = {};
     public String[] moderators = {};
     protected static Field[] fields = Account.class.getFields();
-    
-    public Account() {
-        
-    }
 }

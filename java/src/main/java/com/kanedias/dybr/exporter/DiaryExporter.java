@@ -1,11 +1,11 @@
-package diary_exporter;
+package com.kanedias.dybr.exporter;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import java.io.*;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.net.URLEncoder;
@@ -19,48 +19,44 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONArray;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
-public class Diary_exporter implements Runnable {
-    Html_getter h;
+public class DiaryExporter implements Runnable {
+    private HtmlRetriever h;
     Account acc;
     static String shortname = "";
     List<Post> posts;
-    Map<String,String> image_gallery;
-    static NewJFrame frame;
+    Map<String, String> image_gallery;
+    static MainJFrame frame;
     JSONArray ready;
     List<String> ready_ids;
     static Logger logger;
-    
-    public Diary_exporter(NewJFrame f) {
-        frame = f;
+
+    public DiaryExporter(MainJFrame frame) {
+        DiaryExporter.frame = frame;
         logger = Logger.getLogger("MyLog");
     }
-    
+
     public static String createhash(String json) {
         MessageDigest md = null;
         try {
             md = MessageDigest.getInstance("MD5");
-            md.reset();  
-            md.update((json+shortname).getBytes("windows-1251"));
+            md.reset();
+            md.update((json + shortname).getBytes("windows-1251"));
         } catch (UnsupportedEncodingException | NoSuchAlgorithmException ex) {
             frame.printInfo("<html>Ошибка при подготовке к аутентификации.</html>");
-            Diary_exporter.logger.log(Level.SEVERE, "Ошибка при подготовке к аутентификации.", ex);
+            DiaryExporter.logger.log(Level.SEVERE, "Ошибка при подготовке к аутентификации.", ex);
         }
         byte[] digest = md.digest();
-        BigInteger bigInt = new BigInteger(1,digest);
+        BigInteger bigInt = new BigInteger(1, digest);
         String hashtext = bigInt.toString(16);
-        while(hashtext.length() < 32 ){
-          hashtext = "0"+hashtext;
+        while (hashtext.length() < 32) {
+            hashtext = "0" + hashtext;
         }
 
         return hashtext;
     }
-    
-    public static void createJson(Map<String,String> image_gallery, String dir) throws IllegalArgumentException, IllegalAccessException, IOException {
+
+    public static void createJson(Map<String, String> image_gallery, String dir) throws IllegalArgumentException, IllegalAccessException, IOException {
         JSONObject jsonObject = new JSONObject();
         image_gallery.entrySet().forEach((entry) -> {
             jsonObject.put(entry.getKey(), entry.getValue());
@@ -69,8 +65,9 @@ public class Diary_exporter implements Runnable {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createhash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
-        }        
-    } 
+        }
+    }
+
     public static void createJson(Account acc, String dir) throws IllegalArgumentException, IllegalAccessException, IOException {
         JSONObject jsonObject = new JSONObject();
         for (Field field : Account.fields) {
@@ -80,12 +77,13 @@ public class Diary_exporter implements Runnable {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createhash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
-        }        
-    }  
+        }
+    }
+
     public static void createJson(List<Post> posts, int from, String dir, int filenumber) throws IllegalArgumentException, IllegalAccessException, IOException {
-        JSONObject jsonObject = new JSONObject();        
+        JSONObject jsonObject = new JSONObject();
         JSONArray arr = new JSONArray();
-        for(int i = from; i < posts.size(); i++) {
+        for (int i = from; i < posts.size(); i++) {
             Post post = posts.get(i);
             JSONObject jsonPostObject = new JSONObject();
             for (Field field : Post.fields) {
@@ -98,34 +96,39 @@ public class Diary_exporter implements Runnable {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createhash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
-        }        
-    }   
+        }
+    }
+
     public static Object createJsonElement(Object obj) throws IllegalArgumentException, IllegalAccessException {
-        if(obj instanceof String[]) {
+        if (obj instanceof String[]) {
             JSONArray arr = new JSONArray();
-            for(Object s: (Object[])obj) {
+            for (Object s : (Object[]) obj) {
                 arr.add(s);
             }
             return arr;
-        } if(obj instanceof List) {
+        }
+        if (obj instanceof List) {
             JSONArray arr = new JSONArray();
-            for(Object s: (List)obj) {
+            for (Object s : (List) obj) {
                 arr.add(createJsonElement(s));
             }
             return arr;
-        } if(obj instanceof Post.Voting) {            
+        }
+        if (obj instanceof Post.Voting) {
             JSONObject jsonObject = new JSONObject();
             for (Field field : Post.Voting.fields) {
                 jsonObject.put(field.getName(), createJsonElement(field.get(obj)));
             }
             return jsonObject;
-        }  if(obj instanceof Post.Answer) {            
+        }
+        if (obj instanceof Post.Answer) {
             JSONObject jsonObject = new JSONObject();
             for (Field field : Post.Answer.fields) {
                 jsonObject.put(field.getName(), createJsonElement(field.get(obj)));
             }
             return jsonObject;
-        }  if(obj instanceof Comment) {            
+        }
+        if (obj instanceof Comment) {
             JSONObject jsonObject = new JSONObject();
             for (Field field : Comment.fields) {
                 jsonObject.put(field.getName(), createJsonElement(field.get(obj)));
@@ -133,28 +136,28 @@ public class Diary_exporter implements Runnable {
             return jsonObject;
         } else {
             return obj;
-        }        
+        }
     }
-    
-    public void getReady(String dir) throws FileNotFoundException, IOException, ParseException {
-        File[] fList;        
+
+    public void getReady(String dir) throws IOException, ParseException {
+        File[] fList;
         File F = new File(dir);
 
         fList = F.listFiles();
         JSONParser parser = new JSONParser();
         JSONObject object;
-        
+
         for (File fList1 : fList) {
             if (!fList1.isFile()) {
                 continue;
             }
             String name = fList1.getName();
-            if(name.equals("images.json")) {
-                object = (JSONObject) parser.parse(new FileReader(dir+"/"+name));
-                
-                if(!object.containsKey("hash"))
+            if (name.equals("images.json")) {
+                object = (JSONObject) parser.parse(new FileReader(dir + "/" + name));
+
+                if (!object.containsKey("hash"))
                     frame.printErrorInfo(1);
-                
+
                 for (Object key : object.keySet()) {
                     //based on you key types
                     String keyStr = (String) key;
@@ -162,21 +165,21 @@ public class Diary_exporter implements Runnable {
                     image_gallery.put(keyStr, keyvalue);
                 }
                 continue;
-            } else if(!name.contains("posts_")) continue;
-            object = (JSONObject) parser.parse(new FileReader(dir+"/"+name));
+            } else if (!name.contains("posts_")) continue;
+            object = (JSONObject) parser.parse(new FileReader(dir + "/" + name));
 
-            if(!object.containsKey("hash"))
+            if (!object.containsKey("hash"))
                 frame.printErrorInfo(1);
-            
-            for(Object o: (JSONArray) object.get("posts")) {
+
+            for (Object o : (JSONArray) object.get("posts")) {
                 ready_ids.add((String) ((JSONObject) o).get("postid"));
-                ready.add((JSONObject) o);
-            } 
-            Post_parser.max_post_file = Math.max(Post_parser.max_post_file, Integer.parseInt(name.substring(6, name.length()-5)));
+                ready.add(o);
+            }
+            PostParser.postCounter = Math.max(PostParser.postCounter, Integer.parseInt(name.substring(6, name.length() - 5)));
         }
-        
-        if(frame.checkLoaded()) {
-            F = new File(dir+"/Images");
+
+        if (frame.checkLoaded()) {
+            F = new File(dir + "/Images");
             fList = F.listFiles();
 
             for (File fList1 : fList) {
@@ -184,173 +187,172 @@ public class Diary_exporter implements Runnable {
                     continue;
                 }
                 String name = fList1.getName();
-                h.max_img_file = Math.max(h.max_img_file, Integer.parseInt(name.substring(6, name.length()-5)));
+                h.imgCounter = Math.max(h.imgCounter, Integer.parseInt(name.substring(6, name.length() - 5)));
             }
         }
-        
+
     }
-    
+
     @Override
-    public void run() {        
+    public void run() {
         acc = new Account();
         posts = new ArrayList<>();
-        
+
         String login = frame.getLogin();
         String loginutf = login;
         String pass = frame.getPass();
         String dir = frame.getDir();
-        
+
         dir = dir.replaceAll("\\\\", "/");
-        
-                
-        if(!login.equals("") && !pass.equals("") && !dir.equals(""))
-        {     
+
+
+        if (!login.equals("") && !pass.equals("") && !dir.equals("")) {
             frame.printInfo("<html>Подключение.<br>Может потребоваться некоторое время на установку cоединения и создание лог-файла.</html>");
-            try {  
-                FileHandler fh;  
-                fh = new FileHandler(dir+"/diary_exporter_log_file.log");  
+            try {
+                FileHandler fh;
+                fh = new FileHandler(dir + "/diary_exporter_log_file.log");
                 logger.addHandler(fh);
-                SimpleFormatter formatter = new SimpleFormatter();  
-                fh.setFormatter(formatter); 
+                SimpleFormatter formatter = new SimpleFormatter();
+                fh.setFormatter(formatter);
             } catch (Exception ex) {
                 frame.printInfo("<html>Ошибка при создании лог-файла.</html>");
                 frame.printErrorInfo(-1);
-                Diary_exporter.logger.log(Level.SEVERE, "Ошибка при создании лог-файла.", ex);
-            }          
-            
-            Diary_exporter.logger.info("cookie creation");      
+                DiaryExporter.logger.log(Level.SEVERE, "Ошибка при создании лог-файла.", ex);
+            }
+
+            DiaryExporter.logger.info("cookie creation");
             MessageDigest md = null;
             try {
                 loginutf = URLEncoder.encode(login, "windows-1251");
                 md = MessageDigest.getInstance("MD5");
-                md.reset();  
+                md.reset();
                 md.update(pass.getBytes("windows-1251"));
             } catch (Exception ex) {
                 frame.printInfo("<html>Ошибка при подготовке к аутентификации.</html>");
                 frame.printErrorInfo(2);
-                Diary_exporter.logger.log(Level.SEVERE, "Ошибка при подготовке к аутентификации.", ex);
+                DiaryExporter.logger.log(Level.SEVERE, "Ошибка при подготовке к аутентификации.", ex);
             }
             byte[] digest = md.digest();
-            BigInteger bigInt = new BigInteger(1,digest);
+            BigInteger bigInt = new BigInteger(1, digest);
             String hashtext = bigInt.toString(16);
-            while(hashtext.length() < 32 ){
-              hashtext = "0"+hashtext;
+            while (hashtext.length() < 32) {
+                hashtext = "0" + hashtext;
             }
 
-            h = new Html_getter(loginutf, hashtext);            
+            h = new HtmlRetriever(loginutf, hashtext);
             ready = new JSONArray();
             ready_ids = new ArrayList<>();
-            
-            Post_parser.max_post_file = -1;
-            h.max_img_file = -1;
+
+            PostParser.postCounter = -1;
+            h.imgCounter = -1;
 
             try {
-                acc = Account_parser.getAccount(h, loginutf);
-                acc.username = login; 
+                acc = AccountParser.getAccount(h, loginutf);
+                acc.username = login;
                 frame.printInfo("Данные аккаунта получены");
-                Diary_exporter.logger.info("account ready");
+                DiaryExporter.logger.info("account ready");
             } catch (Exception ex) {
                 frame.printInfo("<html>Ошибка аутентификации.<br>Ваши логин/пароль не верны или случилось что-то непредвиденное.</html>");
                 frame.printErrorInfo(2);
-                Diary_exporter.logger.log(Level.SEVERE, "Ошибка аутентификации.<br>Ваши логин/пароль не верны или случилось что-то непредвиденное.", ex);
+                DiaryExporter.logger.log(Level.SEVERE, "Ошибка аутентификации.<br>Ваши логин/пароль не верны или случилось что-то непредвиденное.", ex);
                 //throw new Error();
             }
-            
+
             image_gallery = new HashMap<>();
-            
+
             if (acc.shortname.equals("")) {
                 if (acc.journal.equals("0")) {
-                    frame.printInfo("Похоже, вы не ведете ни дневник, ни сообщество."); 
+                    frame.printInfo("Похоже, вы не ведете ни дневник, ни сообщество.");
                     logger.info("no diary");
                 } else {
-                    frame.printInfo("<html>Ошибка аутентификации.</html>"); 
+                    frame.printInfo("<html>Ошибка аутентификации.</html>");
                 }
                 acc.journal = "0";
-            } else { 
+            } else {
                 shortname = acc.shortname;
                 logger.info("creation dirs");
                 File myPath;
-                dir += "/diary_"+acc.shortname;
-                if(frame.loadImage()) {
-                    myPath = new File(dir+"/Images");  
+                dir += "/diary_" + acc.shortname;
+                if (frame.loadImage()) {
+                    myPath = new File(dir + "/Images");
                 } else {
-                    myPath = new File(dir);   
+                    myPath = new File(dir);
                 }
                 myPath.mkdirs();
-                h.setDirectory(dir+"/Images");   
-                
-                Diary_exporter.logger.info("save accout");
-                try {                    
+                h.setDirectory(dir + "/Images");
+
+                DiaryExporter.logger.info("save accout");
+                try {
                     createJson(acc, dir);
-                } catch (Exception ex) {                    
+                } catch (Exception ex) {
                     frame.printInfo("<html>Что-то пошло не так при сохранении данных аккаунта.</html>");
                     frame.printErrorInfo(2);
-                    Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так при сохранении данных аккаунта.", ex);
+                    DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так при сохранении данных аккаунта.", ex);
                     throw new Error();
                 }
-                
-                if(frame.addLoad()) {
+
+                if (frame.addLoad()) {
                     frame.printInfo("Обработка скачанных ранее файлов");
-                    Diary_exporter.logger.info("looking for information in old files");
+                    DiaryExporter.logger.info("looking for information in old files");
                     try {
                         getReady(dir);
-                    } catch (Exception ex) {                   
+                    } catch (Exception ex) {
                         frame.printInfo("<html>Что-то пошло не так при обработке уже имеющихся данных.</html>");
                         frame.printErrorInfo(2);
-                        Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так при обработке уже имеющихся данных.", ex);
+                        DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так при обработке уже имеющихся данных.", ex);
                         //throw new Error();
                     }
                 }
-                
+
                 try {
-                    posts = Post_parser.getPosts(h, acc.shortname, dir, ready_ids);
+                    posts = PostParser.getPosts(h, acc.shortname, dir, ready_ids);
                 } catch (Exception ex) {
                     frame.printInfo("<html>Что-то пошло не так, когда выгружались посты.</html>");
                     frame.printErrorInfo(2);
-                    Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались посты.", ex);
+                    DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались посты.", ex);
                     throw new Error();
                 }
-            
-                if(frame.loadImage()) {    
-                    Diary_exporter.logger.info("image loading start");
-                    try {                
+
+                if (frame.loadImage()) {
+                    DiaryExporter.logger.info("image loading start");
+                    try {
                         frame.printInfo("Начинается выгрузка изображений");
-                        image_gallery = Post_parser.loadAllImages(h, posts, image_gallery, dir);
+                        image_gallery = PostParser.loadAllImages(h, posts, image_gallery, dir);
                     } catch (Exception ex) {
                         frame.printInfo("<html>Что-то пошло не так, когда выгружались изображения.</html>");
                         frame.printErrorInfo(2);
-                        Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались изображения.", ex);
+                        DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались изображения.", ex);
                         throw new Error();
-                    }                
+                    }
 
-                    if(frame.checkLoaded()) {
-                        for(Object o: ready) {
+                    if (frame.checkLoaded()) {
+                        for (Object o : ready) {
                             try {
-                                Post_parser.loadImage(h, (String) ((JSONObject) o).get("message_html"), image_gallery, dir);
-                                for(Object oc: (JSONArray) ((JSONObject) o).get("comments")) {
-                                    Post_parser.loadImage(h, (String) ((JSONObject) oc).get("message_html"), image_gallery, dir);
+                                PostParser.loadImage(h, (String) ((JSONObject) o).get("message_html"), image_gallery, dir);
+                                for (Object oc : (JSONArray) ((JSONObject) o).get("comments")) {
+                                    PostParser.loadImage(h, (String) ((JSONObject) oc).get("message_html"), image_gallery, dir);
                                 }
-                            } catch(Exception ex) {
+                            } catch (Exception ex) {
                                 frame.printInfo("<html>Что-то пошло не так, когда выгружались изображения.</html>");
                                 frame.printErrorInfo(2);
-                                Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались изображения.", ex);
+                                DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались изображения.", ex);
                                 throw new Error();
                             }
                         }
                     }
 
-                    try {  
-                        if(!acc.avatar.equals("") && !image_gallery.containsKey(acc.avatar)) {
+                    try {
+                        if (!acc.avatar.equals("") && !image_gallery.containsKey(acc.avatar)) {
                             image_gallery.put(acc.avatar, h.get(acc.avatar, true));
                         }
                         frame.printInfo("Изображения получены");
                     } catch (Exception ex) {
                         frame.printInfo("<html>Что-то пошло не так, когда выгружалась аватарка.</html>");
                         frame.printErrorInfo(2);
-                        Diary_exporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружалась аватарка.", ex);
+                        DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружалась аватарка.", ex);
                         throw new Error();
                     }
-                    Diary_exporter.logger.info("image loading stop");
+                    DiaryExporter.logger.info("image loading stop");
                 }
                 frame.printInfo("Готово");
             }

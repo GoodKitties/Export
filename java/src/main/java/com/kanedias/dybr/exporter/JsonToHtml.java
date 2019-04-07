@@ -1,97 +1,94 @@
-package diary_exporter;
+package com.kanedias.dybr.exporter;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-public class Json_to_html implements Runnable {
-    static NewJFrame frame;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class JsonToHtml implements Runnable {
+    static MainJFrame frame;
     String account;
     List<String> posts;
     String username = "";
-    
-    public Json_to_html(NewJFrame f) {
+
+    public JsonToHtml(MainJFrame f) {
         frame = f;
     }
-    
-    
+
+
     public void getReady(String dir) {
-        File[] fList;        
+        File[] fList;
         File F = new File(dir);
 
         fList = F.listFiles();
-        
+
         for (File fList1 : fList) {
             if (!fList1.isFile()) {
                 continue;
             }
             String name = fList1.getName();
             frame.printHtmlInfo("<html>Разбор файлов, подождите...<br>name</html>");
-            if(name.equals("account.json")) {
+            if (name.equals("account.json")) {
                 account = "account.json";
             }
-            if(!name.contains("posts_")) continue;
+            if (!name.contains("posts_")) {
+                continue;
+            }
+
             posts.add(name);
-        }        
+        }
     }
-    
+
 
     @Override
     public void run() {
         account = "";
-        posts = new ArrayList();
-        
+        posts = new ArrayList<>();
+
         String dir = frame.getHtmlDir();
-        
+
         dir = dir.replaceAll("\\\\", "/");
-        
-        if(!dir.equals("")) {
+
+        if (!dir.equals("")) {
             frame.printHtmlInfo("Разбор файлов, подождите...");
             getReady(dir);
-            if(!account.equals("")) {
+            if (!account.equals("")) {
                 File myPath;
-                myPath = new File(dir+"_html");
+                myPath = new File(dir + "_html");
                 myPath.mkdirs();
-                
+
                 try {
                     JSONParser parser = new JSONParser();
                     JSONObject object;
-                    JSONObject acc = (JSONObject) parser.parse(new FileReader(dir+"/"+account));
-                    
-                    String account_page = accountText(acc, "html_"+posts.get(0)+".html");
+                    JSONObject acc = (JSONObject) parser.parse(new FileReader(dir + "/" + account));
+
+                    String account_page = accountText(acc, "html_" + posts.get(0) + ".html");
                     try (FileWriter file = new FileWriter(dir + "_html/html_account.html")) {
                         file.write(account_page.replaceAll("\\\\/", "/"));
                     }
-                    for(int i = 0; i < posts.size(); i++) {
+                    for (int i = 0; i < posts.size(); i++) {
                         String p = posts.get(i);
-                        object = (JSONObject) parser.parse(new FileReader(dir+"/"+p));
-                        int prev = i-1<0 ? posts.size()-1 : i-1;
-                        int next = i+1>=posts.size() ? 0 : i+1;
+                        object = (JSONObject) parser.parse(new FileReader(dir + "/" + p));
+                        int prev = i - 1 < 0 ? posts.size() - 1 : i - 1;
+                        int next = i + 1 >= posts.size() ? 0 : i + 1;
                         String page = pageText(object, "html_" + posts.get(prev) + ".html", "html_" + posts.get(next) + ".html", (String) acc.get("username"));
                         try (FileWriter file = new FileWriter(dir + "_html/html_" + p + ".html")) {
                             file.write(page.replaceAll("\\\\/", "/"));
                         }
-                        int percent = (i+1) / posts.size();
+                        int percent = (i + 1) / posts.size();
                         frame.printHtmlInfo("Созание страниц " + percent + "%");
-                    }                    
+                    }
                 } catch (FileNotFoundException ex) {
-                    Logger.getLogger(Json_to_html.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(JsonToHtml.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException ex) {
-                    Logger.getLogger(Json_to_html.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(JsonToHtml.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (ParseException ex) {
-                    Logger.getLogger(Json_to_html.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(JsonToHtml.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }
@@ -99,7 +96,7 @@ public class Json_to_html implements Runnable {
         frame.changeHtmlEnabled();
         return;
     }
-    
+
     public static String accountText(JSONObject object, String link) {
         String page = "";
         page += "<html>\n" +
@@ -239,10 +236,10 @@ public class Json_to_html implements Runnable {
                 "</script>\n" +
                 "</body>\n" +
                 "</html>";
-        
+
         return page;
     }
-    
+
     public static String pageText(JSONObject object, String link_prev, String link_next, String user) {
         String page = "";
         page += "<html>\n" +
@@ -256,7 +253,7 @@ public class Json_to_html implements Runnable {
                 "		width: 1.7em;  \n" +
                 "		height: 1.7em;\n" +
                 "		text-align: center;\n" +
-                "	}\n" + 
+                "	}\n" +
                 "	.postlink {\n" +
                 "		cursor: pointer;\n" +
                 "		text-decoration: underline;\n" +
@@ -380,7 +377,7 @@ public class Json_to_html implements Runnable {
                 "	\n" +
                 "	data[\"posts\"].forEach(function(item, i) {	  \n" +
                 "		var p = document.createElement('p')\n" +
-                "		p.setAttribute('value', i)\n" + 
+                "		p.setAttribute('value', i)\n" +
                 "		p.setAttribute('class', 'postlink')\n" +
                 "		p.onclick = function showdata() {\n" +
                 "			clear(post)\n" +
@@ -455,8 +452,8 @@ public class Json_to_html implements Runnable {
                 "</script>\n" +
                 "</body>\n" +
                 "</html>";
-        
+
         return page;
     }
-    
+
 }

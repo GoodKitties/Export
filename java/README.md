@@ -1,8 +1,8 @@
 ﻿Инструкция
 
 * установить java, если не установлено https://java.com/ru/download/
-* выгрузить к себе и разархивировать файл [dist.zip](https://github.com/GoodKitties/Export/raw/master/java/dist.zip) (вложенная папка lib необходима)
-* запустить diary\_exporter.jar
+* выгрузить к себе и разархивировать файл [dist.zip](https://github.com/GoodKitties/Export/raw/master/java/diary-exporter.jar)
+* запустить diary-exporter.jar
 * ввести требуемые данные
 * результаты будут сложены в папку diary\_*shortname* внутри выбранного вами каталога (*shortname* - короткое имя выгружаемого аккаунта)
 * html страницы складываются в папку diary\_*shortname*\_html рядом с папкой diary\_*shortname*
