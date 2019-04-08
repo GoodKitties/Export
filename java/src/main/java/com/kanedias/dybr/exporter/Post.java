@@ -5,34 +5,37 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Post {
-    List<String> tags = new ArrayList<String>();
-    List<Comment> comments = new ArrayList<Comment>();
-    String no_comments = "0";
-    String author_username = "";
-    String current_music = "";
-    String current_mood = "";
-    String access = "0";
-    String[] access_list = {};
-    String title = "";
-    String message_html = "";
-    String dateline_date = "";
-    String dateline_cdate = "";
-    String postid = "";
-    Voting voting = new Voting();
+    public List<String> tags = new ArrayList<String>();
+    public List<Comment> comments = new ArrayList<Comment>();
+    public String no_comments = "0";
+    public String author_username = "";
+    public String current_music = "";
+    public String current_mood = "";
+    public String access = "0";
+    public String[] access_list = {};
+    public String title = "";
+    public String message_html = "";
+    public String dateline_date = "";
+    public String dateline_cdate = "";
+    public String postid = "";
+    public Voting voting = new Voting();
+
     static Field[] fields = Post.class.getFields();
 
     public static class Voting {
-        String question = "";
-        boolean multiselect = false;
-        boolean end = false;
-        List<Answer> answers = new ArrayList<Answer>();
+        public String question = "";
+        public boolean multiselect = false;
+        public boolean end = false;
+        public List<Answer> answers = new ArrayList<Answer>();
+
         static Field[] fields = Voting.class.getFields();
     }
 
     public static class Answer {
-        String variant = "0";
-        String count = "0";
-        String percent = "0";
+        public String variant = "0";
+        public String count = "0";
+        public String percent = "0";
+
         static Field[] fields = Answer.class.getFields();
 
     }

@@ -5,6 +5,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.regex.Pattern;
 public class PostParser {
     static int all, had, postCounter;
 
-    public static List<Post> getPosts(HtmlRetriever h, String shortname, String dir, List<String> ready) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
+    public static List<Post> getPosts(HtmlRetriever h, String shortname, File dir, List<String> ready) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
         DiaryExporter.frame.printInfo("Сбор информации о записях...");
         DiaryExporter.logger.info("seek posts");
         List<String> ids = get_post_ids(h, shortname);
@@ -63,7 +64,7 @@ public class PostParser {
         }
     }
 
-    private static List<Post> getPostsList(HtmlRetriever h, List<String> ids, String shortname, String dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
+    private static List<Post> getPostsList(HtmlRetriever h, List<String> ids, String shortname, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
         List<Post> posts = new ArrayList<Post>();
         int done = 0;
 
@@ -268,14 +269,14 @@ public class PostParser {
         return s;
     }
 
-    public static Map<String, String> loadAllImages(HtmlRetriever h, List<Post> posts, Map<String, String> image_gallery, String dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
+    public static Map<String, String> loadAllImages(HtmlRetriever h, List<Post> posts, Map<String, String> image_gallery, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
         for (Post post : posts) {
             PostParser.loadImages(h, post, image_gallery, dir);
         }
         return image_gallery;
     }
 
-    public static void loadImages(HtmlRetriever h, Post post, Map<String, String> image_gallery, String dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
+    public static void loadImages(HtmlRetriever h, Post post, Map<String, String> image_gallery, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
         DiaryExporter.logger.log(Level.INFO, "изображения из " + post.postid);
         loadImage(h, post.message_html, image_gallery, dir);
         for (Comment com : post.comments) {
@@ -283,7 +284,7 @@ public class PostParser {
         }
     }
 
-    protected static void loadImage(HtmlRetriever h, String message, Map<String, String> image_gallery, String dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
+    protected static void loadImage(HtmlRetriever h, String message, Map<String, String> image_gallery, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
         Elements imgs = Jsoup.parse(message).getElementsByTag("img");
         for (Element img : imgs) {
             String img_src = img.attr("src");

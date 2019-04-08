@@ -13,7 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class HtmlRetriever {
-    public String directory;
+    public String imgDir;
     public String nullMessage = "error_null_page";
     public int imgCounter = -1;
     private String userCookie = "";
@@ -34,8 +34,8 @@ public class HtmlRetriever {
         userCookie = "user_login=" + login + "; user_pass=" + pass + "; ";
     }
 
-    public void setDirectory(String dir) {
-        directory = dir;
+    public void setImgDir(String dir) {
+        imgDir = dir;
     }
 
     private static int normalNumber(String s) {
@@ -150,7 +150,7 @@ public class HtmlRetriever {
                 return nullMessage;
             }
             imgCounter += 1;
-            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(directory + "/image_" + imgCounter + "." + temp[temp.length - 1]));
+            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(imgDir + "/image_" + imgCounter + "." + temp[temp.length - 1]));
             int i;
             while ((i = in.read()) != -1) {
                 out.write(i);
@@ -209,7 +209,7 @@ public class HtmlRetriever {
             String[] temp = url.getFile().split("/");
             temp = temp[temp.length - 1].split(".");
             imgCounter += 1;
-            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(directory + "/image_" + imgCounter + "." + temp[temp.length - 1]));
+            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(imgDir + "/image_" + imgCounter + "." + temp[temp.length - 1]));
             int i;
             while ((i = in.read()) != -1) {
                 out.write(i);

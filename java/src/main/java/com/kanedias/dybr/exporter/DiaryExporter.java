@@ -58,29 +58,29 @@ public class DiaryExporter implements Runnable {
         return hashText.toString();
     }
 
-    public static void createJson(Map<String, String> image_gallery, String dir) throws IllegalArgumentException, IllegalAccessException, IOException {
+    public static void createJson(Map<String, String> image_gallery, File dir) throws IllegalArgumentException, IllegalAccessException, IOException {
         JSONObject jsonObject = new JSONObject();
         image_gallery.forEach((key, value) -> jsonObject.put(key, value));
-        try (FileWriter file = new FileWriter(dir + "/images.json")) {
+        try (FileWriter file = new FileWriter(new File(dir, "images.json"))) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createHash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
         }
     }
 
-    public static void createJson(Account acc, String dir) throws IllegalArgumentException, IllegalAccessException, IOException {
+    public static void createJson(Account acc, File dir) throws IllegalArgumentException, IllegalAccessException, IOException {
         JSONObject jsonObject = new JSONObject();
         for (Field field : Account.fields) {
             jsonObject.put(field.getName(), createJsonElement(field.get(acc)));
         }
-        try (FileWriter file = new FileWriter(dir + "/account.json")) {
+        try (FileWriter file = new FileWriter(new File(dir, "account.json"))) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createHash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
         }
     }
 
-    public static void createJson(List<Post> posts, int from, String dir, int filenumber) throws IllegalArgumentException, IllegalAccessException, IOException {
+    public static void createJson(List<Post> posts, int from, File dir, int filenumber) throws IllegalArgumentException, IllegalAccessException, IOException {
         JSONObject jsonObject = new JSONObject();
         JSONArray arr = new JSONArray();
         for (int i = from; i < posts.size(); i++) {
@@ -92,7 +92,7 @@ public class DiaryExporter implements Runnable {
             arr.add(jsonPostObject);
         }
         jsonObject.put("posts", arr);
-        try (FileWriter file = new FileWriter(dir + "/posts_" + filenumber + ".json")) {
+        try (FileWriter file = new FileWriter(new File(dir,  "posts_" + filenumber + ".json"))) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createHash(json));
             file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
@@ -139,9 +139,7 @@ public class DiaryExporter implements Runnable {
         }
     }
 
-    public void getReadyFiles(String dir) throws IOException, ParseException {
-        File target = new File(dir);
-
+    public void getReadyFiles(File target) throws IOException, ParseException {
         File[] fList = target.listFiles();
         JSONParser parser = new JSONParser();
         JSONObject object;
@@ -152,7 +150,7 @@ public class DiaryExporter implements Runnable {
             }
             String name = fList1.getName();
             if (name.equals("images.json")) {
-                object = (JSONObject) parser.parse(new FileReader(dir + "/" + name));
+                object = (JSONObject) parser.parse(new FileReader(new File(target, name)));
 
                 if (!object.containsKey("hash"))
                     frame.printErrorInfo(1);
@@ -167,7 +165,7 @@ public class DiaryExporter implements Runnable {
             } else if (!name.contains("posts_")) {
                 continue;
             }
-            object = (JSONObject) parser.parse(new FileReader(dir + "/" + name));
+            object = (JSONObject) parser.parse(new FileReader(new File(target, name)));
 
             if (!object.containsKey("hash"))
                 frame.printErrorInfo(1);
@@ -180,7 +178,7 @@ public class DiaryExporter implements Runnable {
         }
 
         if (frame.checkLoaded()) {
-            target = new File(dir + "/Images");
+            target = new File(target, "Images");
             fList = target.listFiles();
 
             for (File fList1 : fList) {
@@ -205,6 +203,7 @@ public class DiaryExporter implements Runnable {
         String targetDir = frame.getDir();
 
         targetDir = targetDir.replaceAll("\\\\", "/");
+        File dlRoot = new File(targetDir);
 
         if (login.equals("") || pass.equals("") || targetDir.equals("")) {
             return;
@@ -212,17 +211,9 @@ public class DiaryExporter implements Runnable {
 
 
         frame.printInfo("<html>Подключение.<br>Может потребоваться некоторое время на установку cоединения и создание лог-файла.</html>");
-        try {
-            FileHandler fh;
-            fh = new FileHandler(targetDir + "/diary_exporter_log_file.log");
-            logger.addHandler(fh);
-            SimpleFormatter formatter = new SimpleFormatter();
-            fh.setFormatter(formatter);
-        } catch (Exception ex) {
-            frame.printInfo("<html>Ошибка при создании лог-файла.</html>");
-            frame.printErrorInfo(-1);
-            DiaryExporter.logger.log(Level.SEVERE, "Ошибка при создании лог-файла.", ex);
-        }
+
+        dlRoot.mkdirs();
+        addLogHandler(targetDir);
 
         DiaryExporter.logger.info("cookie creation");
         MessageDigest md = null;
@@ -277,19 +268,18 @@ public class DiaryExporter implements Runnable {
 
         shortname = acc.shortname;
         logger.info("creation of dirs");
-        File myPath;
-        targetDir += "/diary_" + acc.shortname;
+        File dlDiary = new File(targetDir, "diary_" + acc.shortname);
+        dlDiary.mkdirs();
+
         if (frame.loadImage()) {
-            myPath = new File(targetDir + "/Images");
-        } else {
-            myPath = new File(targetDir);
+            File imgDir = new File(dlRoot,"Images");
+            imgDir.mkdirs();
+            webClient.setImgDir(imgDir.getPath());
         }
-        myPath.mkdirs();
-        webClient.setDirectory(targetDir + "/Images");
 
         DiaryExporter.logger.info("save account");
         try {
-            createJson(acc, targetDir);
+            createJson(acc, dlDiary);
         } catch (Exception ex) {
             frame.printInfo("<html>Что-то пошло не так при сохранении данных аккаунта.</html>");
             frame.printErrorInfo(2);
@@ -301,7 +291,7 @@ public class DiaryExporter implements Runnable {
             frame.printInfo("Обработка скачанных ранее файлов");
             DiaryExporter.logger.info("looking for information in old files");
             try {
-                getReadyFiles(targetDir);
+                getReadyFiles(dlDiary);
             } catch (Exception ex) {
                 frame.printInfo("<html>Что-то пошло не так при обработке уже имеющихся данных.</html>");
                 frame.printErrorInfo(2);
@@ -311,7 +301,7 @@ public class DiaryExporter implements Runnable {
         }
 
         try {
-            posts = PostParser.getPosts(webClient, acc.shortname, targetDir, readyIds);
+            posts = PostParser.getPosts(webClient, acc.shortname, dlDiary, readyIds);
         } catch (Exception ex) {
             frame.printInfo("<html>Что-то пошло не так, когда выгружались посты.</html>");
             frame.printErrorInfo(2);
@@ -323,7 +313,7 @@ public class DiaryExporter implements Runnable {
             DiaryExporter.logger.info("image loading start");
             try {
                 frame.printInfo("Начинается выгрузка изображений");
-                imageGallery = PostParser.loadAllImages(webClient, posts, imageGallery, targetDir);
+                imageGallery = PostParser.loadAllImages(webClient, posts, imageGallery, dlDiary);
             } catch (Exception ex) {
                 frame.printInfo("<html>Что-то пошло не так, когда выгружались изображения.</html>");
                 frame.printErrorInfo(2);
@@ -334,9 +324,9 @@ public class DiaryExporter implements Runnable {
             if (frame.checkLoaded()) {
                 for (Object o : ready) {
                     try {
-                        PostParser.loadImage(webClient, (String) ((JSONObject) o).get("message_html"), imageGallery, targetDir);
+                        PostParser.loadImage(webClient, (String) ((JSONObject) o).get("message_html"), imageGallery, dlDiary);
                         for (Object oc : (JSONArray) ((JSONObject) o).get("comments")) {
-                            PostParser.loadImage(webClient, (String) ((JSONObject) oc).get("message_html"), imageGallery, targetDir);
+                            PostParser.loadImage(webClient, (String) ((JSONObject) oc).get("message_html"), imageGallery, dlDiary);
                         }
                     } catch (Exception ex) {
                         frame.printInfo("<html>Что-то пошло не так, когда выгружались изображения.</html>");
@@ -363,11 +353,24 @@ public class DiaryExporter implements Runnable {
 
         frame.printInfo("Архивируем...");
 
-        File dlDiary = new File(targetDir);
         ZipUtil.pack(dlDiary, new File(dlDiary.getParentFile(), "diary_" + acc.shortname + ".zip"));
 
         frame.printInfo("Готово");
 
         frame.changeEnabled();
+    }
+
+    private void addLogHandler(String targetDir) {
+        try {
+            FileHandler fh;
+            fh = new FileHandler(targetDir + "/diary_exporter_log_file.log");
+            logger.addHandler(fh);
+            SimpleFormatter formatter = new SimpleFormatter();
+            fh.setFormatter(formatter);
+        } catch (Exception ex) {
+            frame.printInfo("<html>Ошибка при создании лог-файла.</html>");
+            frame.printErrorInfo(-1);
+            DiaryExporter.logger.log(Level.SEVERE, "Ошибка при создании лог-файла.", ex);
+        }
     }
 }

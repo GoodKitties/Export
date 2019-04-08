@@ -48,6 +48,8 @@ public class MainJFrame extends JFrame {
     // End of variables declaration//GEN-END:variables
 
     public MainJFrame() {
+        setTitle("Миграция дневников с diary.ru на dybr.ru");
+
         initComponents();
         checkOldImgSetVisibility();
         this.setVisible(true);
@@ -451,7 +453,7 @@ public class MainJFrame extends JFrame {
     private void buttonDirActionPerformed(ActionEvent evt) {//GEN-FIRST:event_button_dirActionPerformed
         JFileChooser fc = new JFileChooser();
         fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        fc.setDialogTitle("Choose parent directory:");
+        fc.setDialogTitle("Choose parent imgDir:");
         fc.setCurrentDirectory(new File(""));
         if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             textDir.setText(fc.getSelectedFile().toString());
@@ -467,7 +469,7 @@ public class MainJFrame extends JFrame {
     private void buttonHtmlDirActionPerformed(ActionEvent evt) {//GEN-FIRST:event_button_html_dirActionPerformed
         JFileChooser fc = new JFileChooser();
         fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        fc.setDialogTitle("Choose parent directory:");
+        fc.setDialogTitle("Choose parent imgDir:");
         fc.setCurrentDirectory(new File(""));
         if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             htmlTextDir.setText(fc.getSelectedFile().toString());

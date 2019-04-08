@@ -34,5 +34,6 @@ public class Account {
     public String[] members = {};
     public String[] owners = {};
     public String[] moderators = {};
+
     protected static Field[] fields = Account.class.getFields();
 }
