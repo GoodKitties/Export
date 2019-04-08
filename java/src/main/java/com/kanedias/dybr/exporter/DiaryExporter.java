@@ -5,6 +5,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.zeroturnaround.zip.ZipUtil;
+import org.zeroturnaround.zip.Zips;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -353,7 +354,26 @@ public class DiaryExporter implements Runnable {
 
         frame.printInfo("Архивируем...");
 
-        ZipUtil.pack(dlDiary, new File(dlDiary.getParentFile(), "diary_" + acc.shortname + ".zip"));
+        File archiveFile = new File(dlRoot, "diary_" + acc.shortname + ".zip");
+        try {
+            archiveFile.createNewFile();
+        } catch (IOException ex) {
+            frame.printInfo("<html>Что-то пошло не так, когда cоздавался архив</html>");
+            frame.printErrorInfo(2);
+            DiaryExporter.logger.log(Level.SEVERE, "Can't create archive", ex);
+            throw new Error();
+        }
+
+        Zips targetArchive = Zips
+                .create()
+                .addFile(dlDiary, true)
+                .destination(archiveFile);
+
+        File imgDir = new File(dlRoot, "Images");
+        if (imgDir.isDirectory()) {
+            targetArchive.addFile(imgDir, true);
+        }
+        targetArchive.process();
 
         frame.printInfo("Готово");
 
