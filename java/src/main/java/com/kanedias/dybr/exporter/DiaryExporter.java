@@ -4,13 +4,13 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.zeroturnaround.zip.ZipUtil;
 import org.zeroturnaround.zip.Zips;
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -59,13 +59,13 @@ public class DiaryExporter implements Runnable {
         return hashText.toString();
     }
 
-    public static void createJson(Map<String, String> image_gallery, File dir) throws IllegalArgumentException, IllegalAccessException, IOException {
+    public static void createJson(Map<String, String> image_gallery, File dir) throws IllegalArgumentException, IOException {
         JSONObject jsonObject = new JSONObject();
         image_gallery.forEach((key, value) -> jsonObject.put(key, value));
-        try (FileWriter file = new FileWriter(new File(dir, "images.json"))) {
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(new File(dir, "images.json")), StandardCharsets.UTF_8)) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createHash(json));
-            file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
+            writer.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
         }
     }
 
@@ -74,10 +74,10 @@ public class DiaryExporter implements Runnable {
         for (Field field : Account.fields) {
             jsonObject.put(field.getName(), createJsonElement(field.get(acc)));
         }
-        try (FileWriter file = new FileWriter(new File(dir, "account.json"))) {
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(new File(dir, "account.json")), StandardCharsets.UTF_8)) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createHash(json));
-            file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
+            writer.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
         }
     }
 
@@ -93,10 +93,10 @@ public class DiaryExporter implements Runnable {
             arr.add(jsonPostObject);
         }
         jsonObject.put("posts", arr);
-        try (FileWriter file = new FileWriter(new File(dir,  "posts_" + filenumber + ".json"))) {
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(new File(dir,  "posts_" + filenumber + ".json")), StandardCharsets.UTF_8)) {
             String json = jsonObject.toJSONString().replaceAll("\\\\/", "/");
             jsonObject.put("hash", createHash(json));
-            file.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
+            writer.write(jsonObject.toJSONString().replaceAll("\\\\/", "/"));
         }
     }
 
@@ -151,7 +151,7 @@ public class DiaryExporter implements Runnable {
             }
             String name = fList1.getName();
             if (name.equals("images.json")) {
-                object = (JSONObject) parser.parse(new FileReader(new File(target, name)));
+                object = (JSONObject) parser.parse(new InputStreamReader(new FileInputStream(new File(target, name)), StandardCharsets.UTF_8));
 
                 if (!object.containsKey("hash"))
                     frame.printErrorInfo(1);
@@ -166,7 +166,7 @@ public class DiaryExporter implements Runnable {
             } else if (!name.contains("posts_")) {
                 continue;
             }
-            object = (JSONObject) parser.parse(new FileReader(new File(target, name)));
+            object = (JSONObject) parser.parse(new InputStreamReader(new FileInputStream(new File(target, name)), StandardCharsets.UTF_8));
 
             if (!object.containsKey("hash"))
                 frame.printErrorInfo(1);

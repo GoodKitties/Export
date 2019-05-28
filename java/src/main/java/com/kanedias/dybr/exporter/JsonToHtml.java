@@ -5,6 +5,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -14,7 +15,6 @@ public class JsonToHtml implements Runnable {
     static MainJFrame frame;
     String account;
     List<String> posts;
-    String username = "";
 
     public JsonToHtml(MainJFrame f) {
         frame = f;
@@ -65,29 +65,25 @@ public class JsonToHtml implements Runnable {
                 try {
                     JSONParser parser = new JSONParser();
                     JSONObject object;
-                    JSONObject acc = (JSONObject) parser.parse(new FileReader(dir + "/" + account));
+                    JSONObject acc = (JSONObject) parser.parse(new InputStreamReader(new FileInputStream(dir + "/" + account), StandardCharsets.UTF_8));
 
                     String account_page = accountText(acc, "html_" + posts.get(0) + ".html");
-                    try (FileWriter file = new FileWriter(dir + "_html/html_account.html")) {
-                        file.write(account_page.replaceAll("\\\\/", "/"));
+                    try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(dir + "_html/html_account.html"), StandardCharsets.UTF_8)) {
+                        writer.write(account_page.replaceAll("\\\\/", "/"));
                     }
                     for (int i = 0; i < posts.size(); i++) {
                         String p = posts.get(i);
-                        object = (JSONObject) parser.parse(new FileReader(dir + "/" + p));
+                        object = (JSONObject) parser.parse(new InputStreamReader(new FileInputStream(dir + "/" + p), StandardCharsets.UTF_8));
                         int prev = i - 1 < 0 ? posts.size() - 1 : i - 1;
                         int next = i + 1 >= posts.size() ? 0 : i + 1;
                         String page = pageText(object, "html_" + posts.get(prev) + ".html", "html_" + posts.get(next) + ".html", (String) acc.get("username"));
-                        try (FileWriter file = new FileWriter(dir + "_html/html_" + p + ".html")) {
-                            file.write(page.replaceAll("\\\\/", "/"));
+                        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(dir + "_html/html_" + p + ".html"), StandardCharsets.UTF_8)) {
+                            writer.write(page.replaceAll("\\\\/", "/"));
                         }
                         int percent = (i + 1) / posts.size();
                         frame.printHtmlInfo("Созание страниц " + percent + "%");
                     }
-                } catch (FileNotFoundException ex) {
-                    Logger.getLogger(JsonToHtml.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (IOException ex) {
-                    Logger.getLogger(JsonToHtml.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (ParseException ex) {
+                } catch (IOException | ParseException ex) {
                     Logger.getLogger(JsonToHtml.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
