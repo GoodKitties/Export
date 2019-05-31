@@ -179,14 +179,19 @@ public class DiaryExporter implements Runnable {
         }
 
         if (frame.checkLoaded()) {
-            target = new File(target, "Images");
-            fList = target.listFiles();
+            File images = new File(target, "Images");
+            if (!images.exists())
+                return;
 
-            for (File fList1 : fList) {
-                if (!fList1.isFile()) {
+            File[] imgList = images.listFiles();
+            if (imgList == null)
+                return;
+
+            for (File img : imgList) {
+                if (!img.isFile()) {
                     continue;
                 }
-                String name = fList1.getName();
+                String name = img.getName();
                 webClient.imgCounter = Math.max(webClient.imgCounter, Integer.parseInt(name.substring(6, name.length() - 5)));
             }
         }
