@@ -34,7 +34,7 @@ public class PostParser {
 
         String page = "/~" + shortname;
         while (!page.equals("")) {
-            String bodystring = h.get("http://www.diary.ru" + page);
+            String bodystring = h.get("https://x.diary.ru" + page);
             page = "";
             if (bodystring.equals(h.nullMessage)) {
                 DiaryExporter.frame.printErrorInfo(0);
@@ -71,7 +71,7 @@ public class PostParser {
         for (String p : ids) {
             Post post = new Post();
             post.postid = p;
-            String bodystring = h.get("http://www.diary.ru/~" + shortname + "/?editpost&postid=" + p);
+            String bodystring = h.get("https://x.diary.ru/~" + shortname + "/?editpost&postid=" + p);
             if (bodystring.equals(h.nullMessage)) {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
@@ -139,7 +139,7 @@ public class PostParser {
                 post.access_list = access_list.nextSibling().toString().split("\\\\n");
             }
 
-            bodystring = h.get("http://www.diary.ru/~" + shortname + "/p" + p + ".html");
+            bodystring = h.get("https://x.diary.ru/~" + shortname + "/p" + p + ".html");
             if (bodystring.equals(h.nullMessage)) {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
@@ -176,7 +176,7 @@ public class PostParser {
                 Element voting_question, voting_table;
                 if (vot_link.size() > 0) {
                     String link = vot_link.last().attr("href");
-                    bodystring = h.get("http://www.diary.ru" + link);
+                    bodystring = h.get("https://x.diary.ru" + link);
                     if (bodystring.equals(h.nullMessage)) {
                         DiaryExporter.frame.printErrorInfo(0);
                         continue;

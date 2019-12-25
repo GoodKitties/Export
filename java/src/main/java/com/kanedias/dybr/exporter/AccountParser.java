@@ -44,7 +44,7 @@ public class AccountParser {
     }
 
     private static int ignition(HtmlRetriever webClient, Account acc) throws IOException, InterruptedException {
-        String html = webClient.get("http://www.diary.ru/");
+        String html = webClient.get("https://x.diary.ru/");
         Document doc = Jsoup.parse(html);
 
         Element inf_menu = doc.getElementById("inf_menu");
@@ -90,7 +90,7 @@ public class AccountParser {
     }
 
     private static void profile_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/member/?access"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/member/?access"));
 
         Elements access = doc.getElementsByAttributeValue("name", "access_mode");
         for (Element el : access) {
@@ -107,7 +107,7 @@ public class AccountParser {
     }
 
     private static void journal_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/diary/?access"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?access"));
 
         Elements access = doc.getElementsByAttributeValue("name", "access_mode");
         for (Element el : access) {
@@ -131,7 +131,7 @@ public class AccountParser {
     }
 
     private static void comment_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/diary/?commentaccess"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?commentaccess"));
 
         Elements access = doc.getElementsByAttributeValue("name", "comments_access_mode");
         for (Element el : access) {
@@ -148,7 +148,7 @@ public class AccountParser {
     }
 
     private static void white_black_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/member/?access"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/member/?access"));
 
         Element white_list = doc.getElementById("white_list");
         if (white_list != null && white_list.childNodeSize() > 0) {
@@ -156,7 +156,7 @@ public class AccountParser {
             acc.white_list = list.split("\n");
         }
 
-        doc = Jsoup.parse(h.get("http://www.diary.ru/options/diary/?pch"));
+        doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?pch"));
 
         Element black_list = doc.getElementById("members");
         if (black_list != null && black_list.childNodeSize() > 0) {
@@ -166,7 +166,7 @@ public class AccountParser {
     }
 
     private static void member_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/member/?" + acc.userid + "&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
+        Document doc = Jsoup.parse(h.get("http://x.diary.ru/member/?" + acc.userid + "&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
 
         Element contant = doc.getElementById("contant");
         if (contant == null) {
@@ -300,7 +300,7 @@ public class AccountParser {
     }
 
     private static void tags_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/diary/?tags"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?tags"));
 
         Element tag_list = doc.getElementById("textarea");
         if (tag_list != null && tag_list.childNodeSize() > 0) {
@@ -310,7 +310,7 @@ public class AccountParser {
     }
 
     private static void profile_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/member/?profile"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/member/?profile"));
 
         Elements by_line = doc.getElementsByAttributeValue("name", "usertitle");
         if (by_line.size() > 0) {
@@ -384,7 +384,7 @@ public class AccountParser {
     }
 
     private static void geography_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/member/?geography"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/member/?geography"));
 
         List<Node> countries = doc.getElementsByAttributeValue("name", "country").first().childNodes();
         for (Node n : countries) {
@@ -414,7 +414,7 @@ public class AccountParser {
     }
 
     private static void epigraph_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://www.diary.ru/options/diary/?owner"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?owner"));
 
         Element ep = doc.getElementById("message");
         if (ep != null && ep.childNodeSize() > 0) {
