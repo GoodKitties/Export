@@ -109,7 +109,7 @@ public class MainJFrame extends JFrame {
         return checkOldImg.isSelected();
     }
 
-    public void changeEnabled() {
+    public void toggleControls() {
         boolean e = !buttonStart.isEnabled();
         textLogin.setEnabled(e);
         textPass.setEnabled(e);
@@ -446,7 +446,7 @@ public class MainJFrame extends JFrame {
     private void buttonStartActionPerformed(ActionEvent evt) {//GEN-FIRST:event_button_startActionPerformed
         labelResult.setText("");
         errorText.setText("");
-        changeEnabled();
+        toggleControls();
         new Thread(new DiaryExporter(this)).start();
     }//GEN-LAST:event_button_startActionPerformed
 

@@ -22,9 +22,8 @@ public class HtmlRetriever {
             "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
             "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0",
-            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:41.0) Gecko/20100101 Firefox/41.0",
-            "Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0"
+            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:41.0) Gecko/20100101 Firefox/68.0",
+            "Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:57.0) Gecko/20100101 Firefox/72.0"
     };
     private String useragent = "";
 
@@ -176,8 +175,8 @@ public class HtmlRetriever {
 
         connection.setRequestMethod(method);
         connection.setRequestProperty("User-Agent", useragent);
-        if (!cookie.equals("")) {
-            connection.setRequestProperty("Cookie", cookie);
+        if (!cookie.equals("") || !userCookie.equals("")) {
+            connection.setRequestProperty("Cookie", userCookie + cookie);
         }
         connection.setRequestProperty("Accept", "*/*");
         if (method.equals("POST") && !data.equals("")) {
@@ -219,7 +218,7 @@ public class HtmlRetriever {
             in.close();
             return "image_" + imgCounter + "." + temp[temp.length - 1];
         } else {
-            rd = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
+            rd = new BufferedReader(new InputStreamReader(connection.getInputStream(), "windows-1251"));
 
             String line;
             while ((line = rd.readLine()) != null) {

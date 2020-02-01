@@ -263,10 +263,11 @@ public class DiaryExporter implements Runnable {
 
         if (acc.shortname.equals("")) {
             if (acc.journal.equals("0")) {
-                frame.printInfo("Похоже, вы не ведете ни дневник, ни сообщество.");
+                frame.printInfo("Похоже, вы не ведёте ни дневник, ни сообщество.");
                 logger.info("no diary");
             } else {
                 frame.printInfo("<html>Ошибка аутентификации.</html>");
+                frame.toggleControls();
             }
             acc.journal = "0";
             return;
@@ -382,7 +383,7 @@ public class DiaryExporter implements Runnable {
 
         frame.printInfo("Готово");
 
-        frame.changeEnabled();
+        frame.toggleControls();
     }
 
     private void addLogHandler(String targetDir) {

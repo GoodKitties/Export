@@ -1,5 +1,6 @@
 package com.kanedias.dybr.exporter;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -7,6 +8,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 
 public class AccountParser {
@@ -66,16 +68,16 @@ public class AccountParser {
         if (link_to_diary != null && link_to_diary.childNodeSize() > 0) {
             journal = link_to_diary.childNode(0).toString();
         }
-        String diary = link_to_diary.attr("href");
+        URI diary = URI.create(link_to_diary.attr("href"));
         DiaryExporter.logger.info("find diary " + journal);
         switch (journal) {
             case "Мой дневник":
                 acc.journal = "1";
-                acc.shortname = diary.substring(7, diary.indexOf(".diary.ru"));
+                acc.shortname = StringUtils.substringBefore(diary.getHost(), ".");
                 break;
             case "Мое сообщество":
                 acc.journal = "2";
-                acc.shortname = diary.substring(7, diary.indexOf(".diary.ru"));
+                acc.shortname = StringUtils.substringBefore(diary.getHost(), ".");
                 break;
             case "Завести дневник":
                 acc.journal = "0";
@@ -166,7 +168,7 @@ public class AccountParser {
     }
 
     private static void member_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("http://x.diary.ru/member/?" + acc.userid + "&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
+        Document doc = Jsoup.parse(h.get("https://x.diary.ru/member/?" + acc.userid + "&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
 
         Element contant = doc.getElementById("contant");
         if (contant == null) {
