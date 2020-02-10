@@ -313,7 +313,7 @@ public class DiaryExporter implements Runnable {
             frame.printInfo("<html>Что-то пошло не так, когда выгружались посты.</html>");
             frame.printErrorInfo(2);
             DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались посты.", ex);
-            throw new Error();
+            throw new RuntimeException(ex);
         }
 
         if (frame.loadImage()) {
@@ -325,7 +325,7 @@ public class DiaryExporter implements Runnable {
                 frame.printInfo("<html>Что-то пошло не так, когда выгружались изображения.</html>");
                 frame.printErrorInfo(2);
                 DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались изображения.", ex);
-                throw new Error();
+                throw new RuntimeException(ex);
             }
 
             if (frame.checkLoaded()) {
@@ -339,7 +339,7 @@ public class DiaryExporter implements Runnable {
                         frame.printInfo("<html>Что-то пошло не так, когда выгружались изображения.</html>");
                         frame.printErrorInfo(2);
                         DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружались изображения.", ex);
-                        throw new Error();
+                        throw new RuntimeException(ex);
                     }
                 }
             }
@@ -353,7 +353,7 @@ public class DiaryExporter implements Runnable {
                 frame.printInfo("<html>Что-то пошло не так, когда выгружалась аватарка.</html>");
                 frame.printErrorInfo(2);
                 DiaryExporter.logger.log(Level.SEVERE, "Что-то пошло не так, когда выгружалась аватарка.", ex);
-                throw new Error();
+                throw new RuntimeException(ex);
             }
             DiaryExporter.logger.info("image loading stop");
         }
@@ -367,7 +367,7 @@ public class DiaryExporter implements Runnable {
             frame.printInfo("<html>Что-то пошло не так, когда cоздавался архив</html>");
             frame.printErrorInfo(2);
             DiaryExporter.logger.log(Level.SEVERE, "Can't create archive", ex);
-            throw new Error();
+            throw new RuntimeException(ex);
         }
 
         Zips targetArchive = Zips

@@ -7,6 +7,7 @@ import org.jsoup.select.Elements;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class PostParser {
     }
 
     private static List<String> get_post_ids(HtmlRetriever h, String shortname) throws IOException, InterruptedException {
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
 
         String page = "/~" + shortname;
         while (!page.equals("")) {
@@ -65,7 +66,7 @@ public class PostParser {
     }
 
     private static List<Post> getPostsList(HtmlRetriever h, List<String> ids, String shortname, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
-        List<Post> posts = new ArrayList<Post>();
+        List<Post> posts = new ArrayList<>();
         int done = 0;
 
         for (String p : ids) {
@@ -189,7 +190,7 @@ public class PostParser {
                     voting_table = voting_question.getElementsByTag("table").first();
                 }
 
-                post.voting.question = voting_question.getElementsByTag("b").first().childNode(0).toString();
+                post.voting.question = voting_question.getElementsByTag("b").first().text();
                 Elements trs = voting_table.getElementsByTag("tr");
                 for (Element tr : trs) {
                     Elements tds = tr.getElementsByTag("td");
@@ -287,15 +288,22 @@ public class PostParser {
     protected static void loadImage(HtmlRetriever h, String message, Map<String, String> image_gallery, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
         Elements imgs = Jsoup.parse(message).getElementsByTag("img");
         for (Element img : imgs) {
-            String img_src = img.attr("src");
-            if (!img_src.contains("static.diary.ru")) continue;
-            img_src = img.attr("src").substring(img.attr("src").lastIndexOf("http://")).replaceAll("\"", "");
-            if (Smile.links.contains(img_src)) continue;
-            DiaryExporter.frame.printInfo("<html>Получение изображений<br>" + img_src + "</html>");
-            if (image_gallery.containsKey(img_src)) continue;
-            String image = h.get(img_src, true);
-            if (image.equals(h.nullMessage)) continue;
-            image_gallery.put(img_src, image);
+            URI imageSrc = URI.create(img.absUrl("src"));
+            if (!imageSrc.getHost().equals("static.diary.ru"))
+                continue;
+
+            if (Smile.links.stream().anyMatch(smileLink -> imageSrc.getPath().equals(smileLink)))
+                continue;
+
+            DiaryExporter.frame.printInfo("<html>Получение изображений<br>" + imageSrc + "</html>");
+            if (image_gallery.containsKey(imageSrc))
+                continue;
+
+            String image = h.get(imageSrc.toString(), true);
+            if (image.equals(h.nullMessage))
+                continue;
+
+            image_gallery.put(imageSrc.toString(), image);
             DiaryExporter.createJson(image_gallery, dir);
         }
     }
