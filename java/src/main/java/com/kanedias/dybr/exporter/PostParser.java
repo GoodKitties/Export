@@ -211,9 +211,7 @@ public class PostParser {
                 c.dateline = comment.getElementsByClass("postTitle").first()
                         .getElementsByTag("span").first()
                         .childNode(0).toString();
-                c.author_username = comment.getElementsByClass("authorName").first()
-                        .getElementsByTag("strong").first()
-                        .childNode(0).toString();
+                c.author_username = comment.getElementsByClass("authorName").text();
                 String message = comment.getElementsByClass("postInner").first()
                         .child(0).child(0).toString();
                 message = message.substring(message.indexOf(">") + 1, message.lastIndexOf("</"));
