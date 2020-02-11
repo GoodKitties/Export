@@ -284,25 +284,31 @@ public class PostParser {
     }
 
     protected static void loadImage(HtmlRetriever h, String message, Map<String, String> image_gallery, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
-        Elements imgs = Jsoup.parse(message).getElementsByTag("img");
+        Elements imgs = Jsoup.parse(message, "https://x.diary.ru").getElementsByTag("img");
         for (Element img : imgs) {
-            URI imageSrc = URI.create(img.absUrl("src"));
-            if (!imageSrc.getHost().equals("static.diary.ru"))
-                continue;
+            String imgAddr = img.absUrl("src");
+            try {
+                URI imageSrc = URI.create(imgAddr);
+                if (!imageSrc.getHost().equals("static.diary.ru"))
+                    continue;
 
-            if (Smile.links.stream().anyMatch(smileLink -> imageSrc.getPath().equals(smileLink)))
-                continue;
+                if (Smile.links.stream().anyMatch(smileLink -> imageSrc.getPath().equals(smileLink)))
+                    continue;
 
-            DiaryExporter.frame.printInfo("<html>Получение изображений<br>" + imageSrc + "</html>");
-            if (image_gallery.containsKey(imageSrc))
-                continue;
+                DiaryExporter.frame.printInfo("<html>Получение изображений<br>" + imageSrc + "</html>");
+                if (image_gallery.containsKey(imageSrc))
+                    continue;
 
-            String image = h.get(imageSrc.toString(), true);
-            if (image.equals(h.nullMessage))
-                continue;
+                String image = h.get(imageSrc.toString(), true);
+                if (image.equals(h.nullMessage))
+                    continue;
 
-            image_gallery.put(imageSrc.toString(), image);
-            DiaryExporter.createJson(image_gallery, dir);
+                image_gallery.put(imageSrc.toString(), image);
+                DiaryExporter.createJson(image_gallery, dir);
+            } catch (Exception ex) {
+                DiaryExporter.logger.log(Level.SEVERE, "Failed to rerieve picture " + imgAddr, ex);
+                continue;
+            }
         }
     }
 }
