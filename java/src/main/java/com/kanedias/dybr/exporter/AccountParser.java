@@ -46,38 +46,24 @@ public class AccountParser {
     }
 
     private static int ignition(HtmlRetriever webClient, Account acc) throws IOException, InterruptedException {
-        String html = webClient.get("https://x.diary.ru/");
-        Document doc = Jsoup.parse(html);
+        String html = webClient.get("https://www.diary.ru/");
+        Document doc = Jsoup.parse(html, "https://www.diary.ru");
 
-        Element inf_menu = doc.getElementById("inf_menu");
-        Element m_menu = doc.getElementById("m_menu");
-        Element main_menu = doc.getElementById("main_menu");
-        String link_to_member;
-        Element link_to_diary;
-        if (inf_menu != null && m_menu != null) {
-            link_to_member = inf_menu.getElementsByTag("a").first().attr("href");
-            link_to_diary = m_menu.getElementsByTag("a").first();
-        } else if (main_menu != null) {
-            link_to_member = main_menu.getElementsByTag("a").get(8).attr("href");
-            link_to_diary = main_menu.getElementsByTag("a").first();
-        } else {
-            DiaryExporter.logger.info("have no access");
-            return 1;
-        }
-        String journal = "";
-        if (link_to_diary != null && link_to_diary.childNodeSize() > 0) {
-            journal = link_to_diary.childNode(0).toString();
-        }
-        URI diary = URI.create(link_to_diary.attr("href"));
-        DiaryExporter.logger.info("find diary " + journal);
-        switch (journal) {
+        Element topMenu = doc.selectFirst("ul.navbar-user");
+        Element journalTypeSpan = topMenu.selectFirst("span.i-menu-diary + span.alt");
+        Element journalLink = journalTypeSpan.parent();
+        Element userProfileLink = topMenu.selectFirst("li.username a");
+        DiaryExporter.logger.info("find diary " + journalTypeSpan.ownText());
+        switch (journalTypeSpan.ownText()) {
             case "Мой дневник":
                 acc.journal = "1";
-                acc.shortname = StringUtils.substringBefore(diary.getHost(), ".");
+                URI diaryUrl = URI.create(journalLink.absUrl("href"));
+                acc.shortname = StringUtils.substringBefore(diaryUrl.getHost(), ".");
                 break;
             case "Мое сообщество":
                 acc.journal = "2";
-                acc.shortname = StringUtils.substringBefore(diary.getHost(), ".");
+                URI communityUrl = URI.create(journalLink.absUrl("href"));
+                acc.shortname = StringUtils.substringBefore(communityUrl.getHost(), ".");
                 break;
             case "Завести дневник":
                 acc.journal = "0";
@@ -87,17 +73,18 @@ public class AccountParser {
                 return 1;
         }
 
-        acc.userid = link_to_member.substring(link_to_member.indexOf("?") + 1);
+        acc.userid = StringUtils.substringAfter(userProfileLink.attr("href"), "?");
         return 0;
     }
 
     private static void profile_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/member/?access"));
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/member/?access"));
 
         Elements access = doc.getElementsByAttributeValue("name", "access_mode");
         for (Element el : access) {
             if (el.hasAttr("checked")) {
                 acc.profile_access = el.attr("value");
+                break;
             }
         }
 
@@ -109,7 +96,7 @@ public class AccountParser {
     }
 
     private static void journal_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?access"));
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?access"));
 
         Elements access = doc.getElementsByAttributeValue("name", "access_mode");
         for (Element el : access) {
@@ -133,12 +120,13 @@ public class AccountParser {
     }
 
     private static void comment_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?commentaccess"));
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?commentaccess"));
 
         Elements access = doc.getElementsByAttributeValue("name", "comments_access_mode");
         for (Element el : access) {
             if (el.hasAttr("checked")) {
                 acc.comment_access = el.attr("value");
+                break;
             }
         }
 
@@ -150,7 +138,7 @@ public class AccountParser {
     }
 
     private static void white_black_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/member/?access"));
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/member/?access"));
 
         Element white_list = doc.getElementById("white_list");
         if (white_list != null && white_list.childNodeSize() > 0) {
@@ -158,7 +146,7 @@ public class AccountParser {
             acc.white_list = list.split("\n");
         }
 
-        doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?pch"));
+        doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?pch"));
 
         Element black_list = doc.getElementById("members");
         if (black_list != null && black_list.childNodeSize() > 0) {
@@ -168,141 +156,51 @@ public class AccountParser {
     }
 
     private static void member_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/member/?" + acc.userid + "&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/member/?" + acc.userid + "&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
 
-        Element contant = doc.getElementById("contant");
-        if (contant == null) {
-            contant = doc.getElementById("lm_right_content");
+        Element avatar = doc.selectFirst("p.avatar img");
+        if (avatar != null) {
+            acc.avatar = avatar.attr("src");
         }
 
-        Elements avatar = contant.child(2).getElementsByTag("img");
-        if (avatar.size() > 0) {
-            acc.avatar = avatar.first().attr("src");
-        }
-
-        Elements heads = doc.getElementsByTag("h6");
-        for (Element el : heads) {
-            String title = "";
-            if (el.childNodeSize() > 0) {
-                title = el.childNode(0).toString();
-                if (title.contains("<noindex>")) {
-                    title = el.childNode(1).toString();
-                }
-            }
-            Elements m;
+        Elements heads = doc.select("div.page-header");
+        for (Element head : heads) {
+            String title = head.selectFirst("p.large > b").ownText();
             switch (title) {
-                case "Дневник: ":
-                case "Сообщество: ":
-                    acc.journal_title = el.childNode(1).childNode(0).childNode(0).toString();
+                case "Дневник":
+                case "Сообщество":
+                    acc.journal_title = head.parent().select("h1 > a").text();
                     break;
-                case "Участник сообществ:":
-                    m = el.nextElementSibling().getElementsByTag("a");
-                    acc.communities = new String[m.size() - 2];
-                    for (int j = 1; j < m.size() - 1; j++) {
-                        Element elem = m.get(j);
-                        String s;
-                        if (elem.childNodeSize() > 0) {
-                            s = elem.childNode(0).toString();
-                            if (s.indexOf("<font color=\"red\">") == 0) {
-                                s = s.substring(s.indexOf(">") + 1, s.lastIndexOf("<"));
-                            }
-                        } else {
-                            s = elem.attr("href");
-                        }
-                        acc.communities[j - 1] = s;
-                    }
+                case "Участник сообществ":
+                    Elements communityLinks = head.parent().select("div.links > a");
+                    acc.communities = communityLinks.stream().map(Element::text).toArray(String[]::new);
                     break;
-                case "Избранные дневники:":
-                    m = el.nextElementSibling().getElementsByTag("a");
-                    acc.favourites = new String[m.size() - 2];
-                    for (int j = 1; j < m.size() - 1; j++) {
-                        Element elem = m.get(j);
-                        String s;
-                        if (elem.childNodeSize() > 0) {
-                            s = elem.childNode(0).toString();
-                            if (s.indexOf("<font color=\"red\">") == 0) {
-                                s = s.substring(s.indexOf(">") + 1, s.lastIndexOf("<"));
-                            }
-                        } else {
-                            s = elem.attr("href");
-                        }
-                        acc.favourites[j - 1] = s;
-                    }
+                case "Избранные дневники":
+                    Elements favLinks = head.parent().select("div.links > a");
+                    acc.favourites = favLinks.stream().map(Element::text).toArray(String[]::new);
                     break;
-                case "Постоянные читатели:":
-                    m = el.nextElementSibling().getElementsByTag("a");
-                    acc.readers = new String[m.size() - 2];
-                    for (int j = 1; j < m.size() - 1; j++) {
-                        Element elem = m.get(j);
-                        String s;
-                        if (elem.childNodeSize() > 0) {
-                            s = elem.childNode(0).toString();
-                            if (s.indexOf("<font color=\"red\">") == 0) {
-                                s = s.substring(s.indexOf(">") + 1, s.lastIndexOf("<"));
-                            }
-                        } else {
-                            s = elem.attr("href");
-                        }
-                        acc.readers[j - 1] = s;
-                    }
+                case "Постоянные читатели":
+                    Elements readerLinks = head.parent().select("div.links > a");
+                    acc.readers = readerLinks.stream().map(Element::text).toArray(String[]::new);
                     break;
-                case "Участники сообщества:":
-                    m = el.nextElementSibling().getElementsByTag("a");
-                    acc.members = new String[m.size() - 2];
-                    for (int j = 1; j < m.size() - 1; j++) {
-                        Element elem = m.get(j);
-                        String s;
-                        if (elem.childNodeSize() > 0) {
-                            s = elem.childNode(0).toString();
-                            if (s.indexOf("<font color=\"red\">") == 0) {
-                                s = s.substring(s.indexOf(">") + 1, s.lastIndexOf("<"));
-                            }
-                        } else {
-                            s = elem.attr("href");
-                        }
-                        acc.members[j - 1] = s;
-                    }
+                case "Участники сообщества":
+                    Elements memberLinks = head.parent().select("div.links > a");
+                    acc.members = memberLinks.stream().map(Element::text).toArray(String[]::new);
                     break;
-                case "Владельцы сообщества:":
-                    m = el.nextElementSibling().getElementsByTag("a");
-                    acc.owners = new String[m.size() - 2];
-                    for (int j = 1; j < m.size() - 1; j++) {
-                        Element elem = m.get(j);
-                        String s;
-                        if (elem.childNodeSize() > 0) {
-                            s = elem.childNode(0).toString();
-                            if (s.indexOf("<font color=\"red\">") == 0) {
-                                s = s.substring(s.indexOf(">") + 1, s.lastIndexOf("<"));
-                            }
-                        } else {
-                            s = elem.attr("href");
-                        }
-                        acc.owners[j - 1] = s;
-                    }
+                case "Владельцы сообщества":
+                    Elements ownerLinks = head.parent().select("div.links > a");
+                    acc.owners = ownerLinks.stream().map(Element::text).toArray(String[]::new);
                     break;
-                case "Модераторы сообщества:":
-                    m = el.nextElementSibling().getElementsByTag("a");
-                    acc.moderators = new String[m.size() - 2];
-                    for (int j = 1; j < m.size() - 1; j++) {
-                        Element elem = m.get(j);
-                        String s;
-                        if (elem.childNodeSize() > 0) {
-                            s = elem.childNode(0).toString();
-                            if (s.indexOf("<font color=\"red\">") == 0) {
-                                s = s.substring(s.indexOf(">") + 1, s.lastIndexOf("<"));
-                            }
-                        } else {
-                            s = elem.attr("href");
-                        }
-                        acc.moderators[j - 1] = s;
-                    }
+                case "Модераторы сообщества":
+                    Elements modLinks = head.parent().select("div.links > a");
+                    acc.moderators = modLinks.stream().map(Element::text).toArray(String[]::new);
                     break;
             }
         }
     }
 
     private static void tags_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?tags"));
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?tags"));
 
         Element tag_list = doc.getElementById("textarea");
         if (tag_list != null && tag_list.childNodeSize() > 0) {
@@ -312,43 +210,16 @@ public class AccountParser {
     }
 
     private static void profile_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/member/?profile"));
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/member/?profile"));
 
         Elements by_line = doc.getElementsByAttributeValue("name", "usertitle");
         if (by_line.size() > 0) {
             acc.by_line = by_line.first().attr("value");
         }
 
-        String year = "00", month = "00", day = "00";
-        List<Node> m = doc.getElementById("day").childNodes();
-        for (Node n : m) {
-            if (n.hasAttr("selected")) {
-                day = n.attr("value");
-                while (month.length() < 2) {
-                    day = "0" + day;
-                }
-            }
-        }
-        m = doc.getElementById("month").childNodes();
-        for (Node n : m) {
-            if (n.hasAttr("selected")) {
-                month = n.attr("value");
-                while (month.length() < 2) {
-                    month = "0" + month;
-                }
-            }
-        }
-        m = doc.getElementById("year").childNodes();
-        for (Node n : m) {
-            if (n.hasAttr("selected")) {
-                if (n.childNodeSize() > 0) {
-                    year = n.childNode(0).toString();
-                }
-                while (month.length() < 2) {
-                    year = "0" + year;
-                }
-            }
-        }
+        String day = StringUtils.leftPad(doc.select("#day option[selected]").val(), 2, "0");
+        String month = StringUtils.leftPad(doc.select("#month option[selected]").val(), 2, "0");
+        String year = StringUtils.leftPad(doc.select("#year option[selected]").text(), 4, "0");
         acc.birthday = year + "-" + month + "-" + day;
 
 
@@ -386,7 +257,7 @@ public class AccountParser {
     }
 
     private static void geography_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/member/?geography"));
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/member/?geography"));
 
         List<Node> countries = doc.getElementsByAttributeValue("name", "country").first().childNodes();
         for (Node n : countries) {
@@ -416,8 +287,7 @@ public class AccountParser {
     }
 
     private static void epigraph_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://x.diary.ru/options/diary/?owner"));
-
+        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?owner"));
         Element ep = doc.getElementById("message");
         if (ep != null && ep.childNodeSize() > 0) {
             acc.epigraph = ep.childNode(0).toString();

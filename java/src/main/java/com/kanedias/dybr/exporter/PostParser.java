@@ -1,5 +1,6 @@
 package com.kanedias.dybr.exporter;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -8,61 +9,58 @@ import org.jsoup.select.Elements;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PostParser {
-    static int all, had, postCounter;
+    static int postCount, completedPostCount, postCounter;
 
     public static List<Post> getPosts(HtmlRetriever h, String shortname, File dir, List<String> ready) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
         DiaryExporter.frame.printInfo("Сбор информации о записях...");
         DiaryExporter.logger.info("seek posts");
-        List<String> ids = get_post_ids(h, shortname);
+        List<String> ids = getPostIds(h, shortname);
         DiaryExporter.logger.info("seek not ready posts");
-        getAdditionalPosts(ready, ids);
-        all = ready.size() + ids.size();
-        had = ready.size();
+        ids.removeAll(ready);
+        postCount = ready.size() + ids.size();
+        completedPostCount = ready.size();
         DiaryExporter.logger.info("load posts start");
         return getPostsList(h, ids, shortname, dir);
     }
 
-    private static List<String> get_post_ids(HtmlRetriever h, String shortname) throws IOException, InterruptedException {
-        List<String> list = new ArrayList<>();
+    private static List<String> getPostIds(HtmlRetriever h, String shortname) throws IOException, InterruptedException {
+        Set<String> postIds = new LinkedHashSet<>();
+        Queue<URI> pageRefs = new LinkedList<>();
+        Set<URI> processedPages = new HashSet<>();
 
-        String page = "/~" + shortname;
-        while (!page.equals("")) {
-            String bodystring = h.get("https://x.diary.ru" + page);
-            page = "";
-            if (bodystring.equals(h.nullMessage)) {
+        pageRefs.add(URI.create("https://www.diary.ru" + "/~" + shortname));
+        while (!pageRefs.isEmpty()) {
+            URI nextPage = pageRefs.remove();
+            String body = h.get(nextPage.toString());
+
+            if (body.equals(h.nullMessage)) {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
             }
-            Document doc = Jsoup.parse(bodystring);
-            Element nextPage = doc.getElementById("pageBar");
-            if (nextPage != null) {
-                nextPage = nextPage.getElementsByAttributeValue("class", "pages_str")
-                        .first().child(1);
-                if (nextPage.childNodeSize() > 0) {
-                    page = nextPage.child(0).attr("href");
+            Document doc = Jsoup.parse(body);
+
+            Elements pageBarLinks = doc.select("#pageBar a");
+            for (Element ref: pageBarLinks) {
+                URI pageLink = URI.create("https://www.diary.ru" + ref.attr("href"));
+                if (!processedPages.contains(pageLink)) {
+                    pageRefs.offer(pageLink);
                 }
+
+                processedPages.add(pageLink);
             }
 
-            Elements ps = doc.getElementsByClass("singlePost");
-            for (Element p : ps) {
-                list.add(p.attr("id").substring(4));
+            Elements postsOnPage = doc.select("#postsArea > div[id^=post]");
+            for (Element p : postsOnPage) {
+                postIds.add(StringUtils.substringAfter(p.attr("id"), "post"));
             }
         }
-        return list;
-    }
-
-    private static void getAdditionalPosts(List<String> ready, List<String> find) {
-        for (String p : ready) {
-            find.remove(p);
-        }
+        return new ArrayList<>(postIds);
     }
 
     private static List<Post> getPostsList(HtmlRetriever h, List<String> ids, String shortname, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
@@ -72,7 +70,7 @@ public class PostParser {
         for (String p : ids) {
             Post post = new Post();
             post.postid = p;
-            String bodystring = h.get("https://x.diary.ru/~" + shortname + "/?editpost&postid=" + p);
+            String bodystring = h.get("https://www.diary.ru/~" + shortname + "/?editpost&postid=" + p);
             if (bodystring.equals(h.nullMessage)) {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
@@ -80,7 +78,7 @@ public class PostParser {
             Document doc = Jsoup.parse(bodystring);
             Element title = doc.getElementById("postTitle");
             if (title == null) {
-                all--;
+                postCount--;
                 continue;
             } else {
                 post.title = title.attr("value");
@@ -140,7 +138,7 @@ public class PostParser {
                 post.access_list = access_list.nextSibling().toString().split("\\\\n");
             }
 
-            bodystring = h.get("https://x.diary.ru/~" + shortname + "/p" + p + ".html");
+            bodystring = h.get("https://www.diary.ru/~" + shortname + "/p" + p + ".html");
             if (bodystring.equals(h.nullMessage)) {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
@@ -171,37 +169,40 @@ public class PostParser {
                 cdate = cdate.substring(cdate.indexOf(":") + 1, cdate.lastIndexOf("</"));
                 post.dateline_cdate = cdate.trim();
             }
-            Elements vot_link = doc.getElementsByAttributeValue("onclick", "return swapPoll(this);");
-            Elements vot_block = doc.getElementsByAttributeValue("class", "voting");
-            if (vot_link.size() > 0 || vot_block.size() > 0) {
-                Element voting_question, voting_table;
-                if (vot_link.size() > 0) {
-                    String link = vot_link.last().attr("href");
-                    bodystring = h.get("https://x.diary.ru" + link);
+            Elements votingLink = doc.getElementsByAttributeValue("onclick", "return swapPoll(this);");
+            Elements votingBlock = doc.getElementsByAttributeValue("class", "voting");
+            if (votingLink.size() > 0 || votingBlock.size() > 0) {
+                Element votingQuestion, votingTable;
+                if (votingLink.size() > 0) {
+                    String link = votingLink.last().attr("href");
+                    bodystring = h.get("https://www.diary.ru" + link);
                     if (bodystring.equals(h.nullMessage)) {
                         DiaryExporter.frame.printErrorInfo(0);
                         continue;
                     }
-                    Document vot_doc = Jsoup.parse(bodystring);
-                    voting_question = vot_doc.body();
-                    voting_table = vot_doc.getElementsByTag("table").first();
+                    Document votingDoc = Jsoup.parse(bodystring);
+                    votingQuestion = votingDoc.body();
+                    votingTable = votingDoc.getElementsByTag("table").first();
                 } else {
-                    voting_question = vot_block.last();
-                    voting_table = voting_question.getElementsByTag("table").first();
+                    votingQuestion = votingBlock.last();
+                    votingTable = votingQuestion.getElementsByTag("table").first();
                 }
 
-                post.voting.question = voting_question.getElementsByTag("b").first().text();
-                Elements trs = voting_table.getElementsByTag("tr");
-                for (Element tr : trs) {
-                    Elements tds = tr.getElementsByTag("td");
-                    if (tds.size() < 4) continue;
-                    Post.Answer a = new Post.Answer();
-                    a.variant = tds.get(0).childNode(0).toString().substring(3).trim();
-                    a.count = tds.get(2).childNode(0).toString().trim();
-                    a.percent = tds.get(3).childNode(0).toString().trim();
-                    post.voting.answers.add(a);
+                post.voting.question = votingQuestion.getElementsByTag("b").first().text();
+                if (votingTable != null) {
+                    Elements trs = votingTable.getElementsByTag("tr");
+                    for (Element tr : trs) {
+                        Elements tds = tr.getElementsByTag("td");
+                        if (tds.size() < 4) continue;
+                        Post.Answer a = new Post.Answer();
+                        a.variant = tds.get(0).childNode(0).toString().substring(3).trim();
+                        a.count = tds.get(2).childNode(0).toString().trim();
+                        a.percent = tds.get(3).childNode(0).toString().trim();
+                        post.voting.answers.add(a);
+                    }
                 }
 
+                // voting table can be null in case you haven't voted on this particular post
             }
 
             Elements comments = doc.getElementsByClass("singleComment");
@@ -219,7 +220,7 @@ public class PostParser {
                 post.comments.add(c);
             }
             posts.add(post);
-            had++;
+            completedPostCount++;
             done++;
             if (done % 20 == 0 || p.equals(ids.get(ids.size() - 1))) {
                 postCounter++;
@@ -227,7 +228,7 @@ public class PostParser {
                 DiaryExporter.logger.info("create json " + postCounter);
                 DiaryExporter.createJson(posts, Math.max((poz - 1) * 20, 0), dir, postCounter);
             }
-            DiaryExporter.frame.printInfo("<html>Получено " + (100 * had / all) + "%<br>" + had + " из " + all + "</html>");
+            DiaryExporter.frame.printInfo("<html>Получено " + (100 * completedPostCount / postCount) + "%<br>" + completedPostCount + " из " + postCount + "</html>");
         }
 
         return posts;
@@ -284,7 +285,7 @@ public class PostParser {
     }
 
     protected static void loadImage(HtmlRetriever h, String message, Map<String, String> image_gallery, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
-        Elements imgs = Jsoup.parse(message, "https://x.diary.ru").getElementsByTag("img");
+        Elements imgs = Jsoup.parse(message, "https://www.diary.ru").getElementsByTag("img");
         for (Element img : imgs) {
             String imgAddr = img.absUrl("src");
             try {
