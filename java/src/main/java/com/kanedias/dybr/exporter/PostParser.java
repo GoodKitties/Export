@@ -14,6 +14,8 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.kanedias.dybr.exporter.Constants.DIARY_URI;
+
 public class PostParser {
     static int postCount, completedPostCount, postCounter;
 
@@ -34,7 +36,7 @@ public class PostParser {
         Queue<URI> pageRefs = new LinkedList<>();
         Set<URI> processedPages = new HashSet<>();
 
-        pageRefs.add(URI.create("https://www.diary.ru" + "/~" + shortname));
+        pageRefs.add(DIARY_URI.resolve("/~" + shortname));
         while (!pageRefs.isEmpty()) {
             URI nextPage = pageRefs.remove();
             String body = h.get(nextPage.toString());
@@ -43,11 +45,11 @@ public class PostParser {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
             }
-            Document doc = Jsoup.parse(body);
+            Document doc = Jsoup.parse(body, DIARY_URI.toString());
 
             Elements pageBarLinks = doc.select("#pageBar a");
             for (Element ref: pageBarLinks) {
-                URI pageLink = URI.create("https://www.diary.ru" + ref.attr("href"));
+                URI pageLink = DIARY_URI.resolve(ref.attr("href"));
                 if (!processedPages.contains(pageLink)) {
                     pageRefs.offer(pageLink);
                 }
@@ -70,7 +72,7 @@ public class PostParser {
         for (String p : ids) {
             Post post = new Post();
             post.postid = p;
-            String bodystring = h.get("https://www.diary.ru/~" + shortname + "/?editpost&postid=" + p);
+            String bodystring = h.get(DIARY_URI.resolve("/~" + shortname + "/?editpost&postid=" + p).toString());
             if (bodystring.equals(h.nullMessage)) {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
@@ -138,7 +140,7 @@ public class PostParser {
                 post.access_list = access_list.nextSibling().toString().split("\\\\n");
             }
 
-            bodystring = h.get("https://www.diary.ru/~" + shortname + "/p" + p + ".html");
+            bodystring = h.get(DIARY_URI.resolve("/~" + shortname + "/p" + p + ".html").toString());
             if (bodystring.equals(h.nullMessage)) {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
@@ -175,7 +177,7 @@ public class PostParser {
                 Element votingQuestion, votingTable;
                 if (votingLink.size() > 0) {
                     String link = votingLink.last().attr("href");
-                    bodystring = h.get("https://www.diary.ru" + link);
+                    bodystring = h.get(DIARY_URI.resolve(link).toString());
                     if (bodystring.equals(h.nullMessage)) {
                         DiaryExporter.frame.printErrorInfo(0);
                         continue;
@@ -244,7 +246,7 @@ public class PostParser {
 
         String diaryname = "0-9a-zA-Zа-яА-Я-_~!@#$&*()+?=/|\\\\.,;:<>\\[\\] ";
         String diarylink = "0-9a-zA-Z-_.!~*'\\\\()/:";
-        Pattern fullJ = Pattern.compile("(?:<a class=\"TagJIco\" href=\"(?:http://www.diary.ru|)/member/\\?[0-9]+\" title=\"профиль\" target=(?:'|\")?_blank(?:'|\")? ?>(?:&nbsp;|)</a>[\\s]*|)<a class=\"TagL\" href=\"[" + diarylink + "]+.diary.ru\" title=\"(?:дневник: |)[" + diaryname + "]*\" target=(?:'|\")?_blank(?:'|\")?>([" + diaryname + "]+)</a>");
+        Pattern fullJ = Pattern.compile("(?:<a class=\"TagJIco\" href=\"(?:https://www.diary.ru|)/member/\\?[0-9]+\" title=\"профиль\" target=(?:'|\")?_blank(?:'|\")? ?>(?:&nbsp;|)</a>[\\s]*|)<a class=\"TagL\" href=\"[" + diarylink + "]+.diary.ru\" title=\"(?:дневник: |)[" + diaryname + "]*\" target=(?:'|\")?_blank(?:'|\")?>([" + diaryname + "]+)</a>");
         Pattern openMORE = Pattern.compile("(<a href=\"(?:/~[" + diarylink + "]+/p[0-9]+.htm\\?oam|)#more[0-9]*\" class=\"LinkMore\" onclick=\"var e=event; if \\(swapMore\\(\"c?[0-9]+m[0-9]+\", e.ctrlKey \\|\\| e.altKey\\)\\) document.location = this.href; return false;\" id=\"linkmorec?[0-9]+m[0-9]+\">[\\s]*)");
         Pattern startMORE = Pattern.compile("(</a>[\\s]*<span id=\"morec?[0-9]+m[0-9]\"+ ondblclick=\"return swapMore\\(\"c?[0-9]+m[0-9]+\"\\);\" style=\"display:none;(?>visibility:hidden;)?\"><a name=\"morec?[0-9]+m[0-9]+start\"></a>)");
         Pattern closeMORE = Pattern.compile("<a name=\"morec?[0-9]+m[0-9]+end\"></a></span>");
@@ -285,12 +287,12 @@ public class PostParser {
     }
 
     protected static void loadImage(HtmlRetriever h, String message, Map<String, String> image_gallery, File dir) throws IOException, InterruptedException, IllegalArgumentException, IllegalAccessException {
-        Elements imgs = Jsoup.parse(message, "https://www.diary.ru").getElementsByTag("img");
+        Elements imgs = Jsoup.parse(message, DIARY_URI.toString()).getElementsByTag("img");
         for (Element img : imgs) {
             String imgAddr = img.absUrl("src");
             try {
                 URI imageSrc = URI.create(imgAddr);
-                if (!imageSrc.getHost().equals("static.diary.ru"))
+                if (!StringUtils.equals(imageSrc.getHost(), "static.diary.ru") && !StringUtils.equals(imageSrc.getHost(), "secure.diary.ru"))
                     continue;
 
                 if (Smile.links.stream().anyMatch(smileLink -> imageSrc.getPath().equals(smileLink)))

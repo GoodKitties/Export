@@ -1,5 +1,8 @@
 package com.kanedias.dybr.exporter;
 
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -188,9 +191,8 @@ public class HtmlRetriever {
             wr.close();
         }
         connection.connect();
-        BufferedReader rd;
         if (connection.getResponseCode() == 503) {
-            rd = new BufferedReader(new InputStreamReader(connection.getErrorStream(), "windows-1251"));
+            BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getErrorStream(), "windows-1251"));
 
             String line;
             while ((line = rd.readLine()) != null) {
@@ -204,21 +206,15 @@ public class HtmlRetriever {
                     (cloudflareKey(line) + url.getHost().length()) + "",
                     image);
         } else if (image) {
-            BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-            String[] temp = url.getFile().split("/");
-            temp = temp[temp.length - 1].split(".");
+            String extension = FilenameUtils.getExtension(url.getPath());
             imgCounter += 1;
-            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(imgDir + "/image_" + imgCounter + "." + temp[temp.length - 1]));
-            int i;
-            while ((i = in.read()) != -1) {
-                out.write(i);
+            try (InputStream in = connection.getInputStream();
+                 OutputStream out = new FileOutputStream(imgDir + "/image_" + imgCounter + "." + extension)) {
+                IOUtils.copy(in, out);
             }
-            out.flush();
-            out.close();
-            in.close();
-            return "image_" + imgCounter + "." + temp[temp.length - 1];
+            return "image_" + imgCounter + "." + extension;
         } else {
-            rd = new BufferedReader(new InputStreamReader(connection.getInputStream(), "windows-1251"));
+            BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getInputStream(), "windows-1251"));
 
             String line;
             while ((line = rd.readLine()) != null) {

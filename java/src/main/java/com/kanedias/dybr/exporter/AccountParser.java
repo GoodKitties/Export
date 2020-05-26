@@ -11,7 +11,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 
+import static com.kanedias.dybr.exporter.Constants.DIARY_URI;
+
 public class AccountParser {
+
     public static Account getAccount(HtmlRetriever h, String login) throws IOException, InterruptedException {
         Account acc = new Account();
         acc.username = login;
@@ -46,8 +49,8 @@ public class AccountParser {
     }
 
     private static int ignition(HtmlRetriever webClient, Account acc) throws IOException, InterruptedException {
-        String html = webClient.get("https://www.diary.ru/");
-        Document doc = Jsoup.parse(html, "https://www.diary.ru");
+        String html = webClient.get(DIARY_URI.toString());
+        Document doc = Jsoup.parse(html, DIARY_URI.toString());
 
         Element topMenu = doc.selectFirst("ul.navbar-user");
         Element journalTypeSpan = topMenu.selectFirst("span.i-menu-diary + span.alt");
@@ -78,7 +81,7 @@ public class AccountParser {
     }
 
     private static void profile_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/member/?access"));
+        Document doc = Jsoup.parse(h.get(DIARY_URI.resolve("/options/member/?access").toString()), DIARY_URI.toString());
 
         Elements access = doc.getElementsByAttributeValue("name", "access_mode");
         for (Element el : access) {
@@ -96,7 +99,7 @@ public class AccountParser {
     }
 
     private static void journal_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?access"));
+        Document doc = Jsoup.parse(h.get(DIARY_URI.resolve("/options/diary/?access").toString()), DIARY_URI.toString());
 
         Elements access = doc.getElementsByAttributeValue("name", "access_mode");
         for (Element el : access) {
@@ -120,7 +123,7 @@ public class AccountParser {
     }
 
     private static void comment_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?commentaccess"));
+        Document doc = Jsoup.parse(h.get(DIARY_URI.resolve("/options/diary/?commentaccess").toString()), DIARY_URI.toString());
 
         Elements access = doc.getElementsByAttributeValue("name", "comments_access_mode");
         for (Element el : access) {
@@ -138,7 +141,7 @@ public class AccountParser {
     }
 
     private static void white_black_list_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/member/?access"));
+        Document doc = Jsoup.parse(h.get(DIARY_URI.resolve("/options/member/?access").toString()), DIARY_URI.toString());
 
         Element white_list = doc.getElementById("white_list");
         if (white_list != null && white_list.childNodeSize() > 0) {
@@ -156,11 +159,13 @@ public class AccountParser {
     }
 
     private static void member_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/member/?" + acc.userid + "&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist"));
+        String html = h.get(DIARY_URI.resolve("/member/?" + acc.userid + "&fullreaderslist&fullfavoriteslist&fullcommunity_membershiplist&fullcommunity_moderatorslist&fullcommunity_masterslist&fullcommunity_memberslist").toString());
+        Document doc = Jsoup.parse(html, DIARY_URI.toString());
+        URI diaryUrl = URI.create("https://www.diary.ru/");
 
         Element avatar = doc.selectFirst("p.avatar img");
         if (avatar != null) {
-            acc.avatar = avatar.attr("src");
+            acc.avatar = diaryUrl.resolve(avatar.attr("src")).toString();
         }
 
         Elements heads = doc.select("div.page-header");
@@ -200,7 +205,7 @@ public class AccountParser {
     }
 
     private static void tags_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?tags"));
+        Document doc = Jsoup.parse(h.get(DIARY_URI.resolve("/options/diary/?tags").toString()), DIARY_URI.toString());
 
         Element tag_list = doc.getElementById("textarea");
         if (tag_list != null && tag_list.childNodeSize() > 0) {
@@ -210,7 +215,7 @@ public class AccountParser {
     }
 
     private static void profile_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/member/?profile"));
+        Document doc = Jsoup.parse(h.get(DIARY_URI.resolve("/options/member/?profile").toString()), DIARY_URI.toString());
 
         Elements by_line = doc.getElementsByAttributeValue("name", "usertitle");
         if (by_line.size() > 0) {
@@ -257,7 +262,7 @@ public class AccountParser {
     }
 
     private static void geography_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/member/?geography"));
+        Document doc = Jsoup.parse(h.get(DIARY_URI.resolve("/options/member/?geography").toString()), DIARY_URI.toString());
 
         List<Node> countries = doc.getElementsByAttributeValue("name", "country").first().childNodes();
         for (Node n : countries) {
@@ -287,7 +292,7 @@ public class AccountParser {
     }
 
     private static void epigraph_step(HtmlRetriever h, Account acc) throws IOException, InterruptedException {
-        Document doc = Jsoup.parse(h.get("https://www.diary.ru/options/diary/?owner"));
+        Document doc = Jsoup.parse(h.get(DIARY_URI.resolve("/options/diary/?owner").toString()), DIARY_URI.toString());
         Element ep = doc.getElementById("message");
         if (ep != null && ep.childNodeSize() > 0) {
             acc.epigraph = ep.childNode(0).toString();
