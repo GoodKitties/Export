@@ -77,7 +77,7 @@ public class PostParser {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
             }
-            Document doc = Jsoup.parse(bodystring);
+            Document doc = Jsoup.parse(bodystring, DIARY_URI.toString());
             Element title = doc.getElementById("postTitle");
             if (title == null) {
                 postCount--;
@@ -134,7 +134,7 @@ public class PostParser {
             }
 
             bodystring = bodystring.replaceAll("\\n", "\\\\n");
-            doc = Jsoup.parse(bodystring);
+            doc = Jsoup.parse(bodystring, DIARY_URI.toString());
             Element access_list = doc.getElementById("access_list3");
             if (access_list != null) {
                 post.access_list = access_list.nextSibling().toString().split("\\\\n");
@@ -145,27 +145,18 @@ public class PostParser {
                 DiaryExporter.frame.printErrorInfo(0);
                 continue;
             }
-            doc = Jsoup.parse(bodystring);
-            Element post_body = doc.getElementById("post" + p);
-            Elements date = post_body.getElementsByTag("span");
+            doc = Jsoup.parse(bodystring, DIARY_URI.toString());
+            Element postBody = doc.getElementById("post" + p);
+            Elements date = postBody.getElementsByTag("span");
             post.dateline_date = date.get(0).childNode(0).toString() +
                     ", " + date.get(1).childNode(0).toString();
             post.dateline_cdate = post.dateline_date;
-            Elements author = post_body.getElementsByClass("authorName");
+            Element author = postBody.selectFirst("div.authorName > a");
             if (author != null) {
-                author = author.first().children();
-                if (author != null) {
-                    Element a = author.last();
-                    if (a.childNodeSize() > 0) {
-                        a = a.child(0);
-                        if (a.childNodeSize() > 0) {
-                            post.author_username = a.childNode(0).toString();
-                        }
-                    }
-                }
+                post.author_username = author.text();
             }
 
-            Element ret = post_body.getElementsByAttributeValue("onclick", "return confirm(\"Вы уверены, что хотите вернуть запись на место?\");").last();
+            Element ret = postBody.getElementsByAttributeValue("onclick", "return confirm(\"Вы уверены, что хотите вернуть запись на место?\");").last();
             if (ret != null) {
                 String cdate = ret.child(0).toString();
                 cdate = cdate.substring(cdate.indexOf(":") + 1, cdate.lastIndexOf("</"));
@@ -182,7 +173,7 @@ public class PostParser {
                         DiaryExporter.frame.printErrorInfo(0);
                         continue;
                     }
-                    Document votingDoc = Jsoup.parse(bodystring);
+                    Document votingDoc = Jsoup.parse(bodystring, DIARY_URI.toString());
                     votingQuestion = votingDoc.body();
                     votingTable = votingDoc.getElementsByTag("table").first();
                 } else {
